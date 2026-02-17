@@ -1,12 +1,12 @@
 export default function Home() {
   return (
     <main className="min-h-screen bg-white text-neutral-900">
-      <div className="mx-auto max-w-5xl px-5 py-12 md:py-16">
-        {/* Top bar */}
+      <div className="mx-auto max-w-[980px] px-5 py-14 md:py-16">
+        {/* Top nav */}
         <header className="flex items-center justify-between">
-          <div className="text-lg font-extrabold tracking-tight">groupdrop (beta)</div>
+          <div className="text-lg font-extrabold">groupdrop (beta)</div>
 
-          <nav className="hidden gap-4 text-sm text-neutral-600 md:flex">
+          <nav className="hidden items-center gap-4 text-sm text-neutral-700 md:flex">
             <a href="#drops" className="hover:text-neutral-900">
               Drops
             </a>
@@ -21,27 +21,27 @@ export default function Home() {
 
         {/* Hero */}
         <section className="mt-14 md:mt-16">
-          <h1 className="text-4xl font-black leading-tight tracking-tight md:text-6xl md:leading-[1.05]">
+          <h1 className="text-4xl font-black tracking-tight leading-[1.1] md:text-6xl">
             Premium group buys,
-            <br className="hidden md:block" />
+            <br />
             without the chaos.
           </h1>
 
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-neutral-600 md:text-lg">
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-neutral-700 md:mt-5 md:text-lg">
             Join curated drops. Watch the total climb. When we hit the target, everyone gets the deal.
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center">
             <a
               href="#join"
-              className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-neutral-800"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-neutral-900 px-5 py-3 text-sm font-extrabold text-white hover:bg-neutral-800 md:w-auto"
             >
               Join the next drop
             </a>
 
             <a
               href="#how"
-              className="inline-flex items-center justify-center rounded-xl border border-neutral-200 px-4 py-3 text-sm font-extrabold text-neutral-900 hover:bg-neutral-50"
+              className="inline-flex w-full items-center justify-center rounded-xl border border-neutral-200 px-5 py-3 text-sm font-extrabold text-neutral-900 hover:bg-neutral-50 md:w-auto"
             >
               How it works
             </a>
@@ -49,53 +49,66 @@ export default function Home() {
         </section>
 
         {/* Drops */}
-        <section id="drops" className="mt-14 grid grid-cols-1 gap-4 md:mt-16 md:grid-cols-2">
-          {/* Active Drop */}
+        <section
+          id="drops"
+          className="mt-14 grid gap-4 md:mt-16 md:grid-cols-2 md:gap-5"
+        >
+          {/* Active drop */}
           <div className="rounded-2xl border border-neutral-200 p-5">
-            <div className="text-xs font-extrabold tracking-wider text-neutral-500">ACTIVE DROP</div>
-            <div className="mt-2 text-xl font-black">Aesop Hand Wash Bundle</div>
-            <div className="mt-1 text-sm text-neutral-600">
-              Target: <span className="font-bold text-neutral-900">$5,000</span> • Ends in{" "}
-              <span className="font-bold text-neutral-900">3 days</span>
+            <div className="text-sm font-extrabold tracking-wide text-neutral-600">
+              ACTIVE DROP
             </div>
 
-            {/* Progress bar */}
+            <div className="mt-2 text-2xl font-black">Aesop Hand Wash Bundle</div>
+
+            <div className="mt-1 text-sm text-neutral-700 md:text-base">
+              Target: <span className="font-extrabold text-neutral-900">$5,000</span> • Ends in{" "}
+              <span className="font-extrabold text-neutral-900">3 days</span>
+            </div>
+
             <div className="mt-5 h-2.5 w-full rounded-full bg-neutral-200">
               <div className="h-2.5 w-[62%] rounded-full bg-neutral-900" />
             </div>
 
-            <div className="mt-3 flex items-center justify-between text-sm text-neutral-600">
+            <div className="mt-4 flex items-center justify-between text-sm text-neutral-700 md:text-base">
               <div>
-                Raised: <span className="font-bold text-neutral-900">$3,100</span>
+                Raised: <span className="font-extrabold text-neutral-900">$3,100</span>
               </div>
               <div>
-                62% • <span className="font-bold text-neutral-900">$1,900</span> to go
+                62% • <span className="font-extrabold text-neutral-900">$1,900</span> to go
               </div>
             </div>
 
             <div className="mt-5">
               <a
                 href="#join"
-                className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-neutral-800"
+                className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-5 py-3 text-sm font-extrabold text-white hover:bg-neutral-800"
               >
                 Join this drop
               </a>
             </div>
 
-            <p className="mt-4 text-xs leading-relaxed text-neutral-500">
+            <p className="mt-4 text-xs leading-relaxed text-neutral-600">
               You’ll see a temporary authorization. We only charge if the drop completes.
             </p>
           </div>
 
-          {/* Up Next */}
+          {/* Up next */}
           <div className="rounded-2xl border border-neutral-200 p-5">
-            <div className="text-xs font-extrabold tracking-wider text-neutral-500">UP NEXT</div>
-            <div className="mt-2 text-xl font-black">Le Labo Discovery Set</div>
-            <div className="mt-1 text-sm text-neutral-600">
-              Vote to unlock • Target <span className="font-bold text-neutral-900">$7,500</span>
+            <div className="text-sm font-extrabold tracking-wide text-neutral-600">
+              UP NEXT
             </div>
 
-            <div className="mt-5 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-700">
+            <div className="mt-2 text-xl font-black md:text-2xl">
+              Le Labo Discovery Set
+            </div>
+
+            <div className="mt-1 text-sm text-neutral-700 md:text-base">
+              Vote to unlock • Target{" "}
+              <span className="font-extrabold text-neutral-900">$7,500</span>
+            </div>
+
+            <div className="mt-5 border-t border-neutral-200 pt-4 text-sm leading-relaxed text-neutral-700">
               Invite a friend and you both get early access.
             </div>
           </div>
@@ -104,35 +117,35 @@ export default function Home() {
         {/* How it works */}
         <section id="how" className="mt-14 md:mt-16">
           <h2 className="text-2xl font-black tracking-tight">How it works</h2>
+
           <ol className="mt-3 space-y-2 text-sm leading-relaxed text-neutral-700 md:text-base">
             <li>
-              <span className="font-bold text-neutral-900">1)</span> We post a curated drop with a target total.
+              <span className="font-extrabold text-neutral-900">1)</span> We post a curated drop with a target total.
             </li>
             <li>
-              <span className="font-bold text-neutral-900">2)</span> You join with one checkout (no chaos).
+              <span className="font-extrabold text-neutral-900">2)</span> You join with one checkout (no chaos).
             </li>
             <li>
-              <span className="font-bold text-neutral-900">3)</span> If the drop hits the target before the timer ends,
-              we charge and fulfill.
+              <span className="font-extrabold text-neutral-900">3)</span> If the drop hits the target before the timer ends, we charge and fulfill.
             </li>
           </ol>
         </section>
 
         {/* Join */}
         <section id="join" className="mt-14 rounded-2xl border border-neutral-200 p-5 md:mt-16">
-          <div className="text-lg font-black tracking-tight">Get notified when new drops go live</div>
+          <h3 className="text-lg font-black">Get notified when new drops go live</h3>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
             <input
               placeholder="you@email.com"
-              className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-400"
+              className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm outline-none focus:border-neutral-400 md:max-w-sm"
             />
-            <button className="rounded-xl bg-neutral-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-neutral-800">
+            <button className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-extrabold text-white hover:bg-neutral-800">
               Notify me
             </button>
           </div>
 
-          <div className="mt-3 text-xs text-neutral-500">(We’ll wire this up to Supabase next.)</div>
+          <p className="mt-3 text-xs text-neutral-500">(We’ll wire this up to Supabase next.)</p>
         </section>
 
         <footer className="mt-10 text-xs text-neutral-500">
