@@ -3,7 +3,7 @@ export default function Home() {
     <main style={{ fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial" }}>
       <div style={{ maxWidth: 980, margin: "0 auto", padding: "64px 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontWeight: 800, fontSize: 20 }}>groupdrop</div>
+          <div style={{ fontWeight: 800, fontSize: 20 }}>groupdrop (beta)</div>
           <div style={{ display: "flex", gap: 14, fontSize: 14 }}>
             <a href="#drops">Drops</a>
             <a href="#how">How it works</a>
