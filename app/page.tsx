@@ -21,11 +21,10 @@ export default function Home() {
 
         {/* Hero */}
         <section className="mt-14 md:mt-16">
-          <h1 className="text-4xl font-black tracking-tight leading-[1.1] md:text-6xl">
-            Premium group buys,
-            <br />
-            without the chaos.
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-[1.1] tracking-tight">
+  Premium group buys, without the chaos.
           </h1>
+
 
           <p className="mt-4 max-w-xl text-base leading-relaxed text-neutral-700 md:mt-5 md:text-lg">
             Join curated drops. Watch the total climb. When we hit the target, everyone gets the deal.
