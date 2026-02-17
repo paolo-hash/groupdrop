@@ -11,16 +11,16 @@ type Sku = {
   tag?: string;
 };
 
-const AESOP_RAISED_KEY = "groupdrop:raised:aesop";
-const TARGET = 5000;
-const DEFAULT_RAISED = 3100;
+const LE_LABO_RAISED_KEY = "groupdrop:raised:lelabo";
+const TARGET = 7500;
+const DEFAULT_RAISED = 900;
 
 const SKUS: Sku[] = [
-  { id: "resurrection-500", name: "Resurrection Aromatique Hand Wash", subtitle: "500mL • Citrus + woody", price: 40, tag: "Best seller" },
-  { id: "resurrection-500-refill", name: "Resurrection Hand Wash Refill", subtitle: "500mL • Refill pouch", price: 32, tag: "Better value" },
-  { id: "resurrection-200", name: "Resurrection Hand Wash", subtitle: "200mL • Travel-friendly size", price: 27 },
-  { id: "hand-care-duo", name: "Hand Care Duo", subtitle: "Wash + Balm • Bundle", price: 68, tag: "Bundle" },
-  { id: "hand-balm", name: "Reverence Aromatique Hand Balm", subtitle: "75mL • Softens + hydrates", price: 33 },
+  { id: "discovery-set", name: "Discovery Set", subtitle: "17 samples • Best intro", price: 79, tag: "Popular" },
+  { id: "santal-33", name: "Santal 33", subtitle: "15mL • Travel spray", price: 89, tag: "Icon" },
+  { id: "another-13", name: "Another 13", subtitle: "15mL • Travel spray", price: 89 },
+  { id: "the-matcha-26", name: "Thé Matcha 26", subtitle: "15mL • Travel spray", price: 89 },
+  { id: "hand-pomade", name: "Hand Pomade", subtitle: "55mL • Light hydration", price: 29 },
   { id: "shipping-protection", name: "Shipping Protection", subtitle: "Optional • Peace of mind", price: 4 },
 ];
 
@@ -28,6 +28,9 @@ function money(n: number) {
   return `$${n.toLocaleString()}`;
 }
 
+/* ---------- Countdown Utilities ---------- */
+
+// Next Friday at 5:00 PM (local time)
 function getNextFriday5pm(): Date {
   const now = new Date();
   const end = new Date(now);
@@ -37,7 +40,10 @@ function getNextFriday5pm(): Date {
   end.setDate(end.getDate() + daysUntilFriday);
   end.setHours(17, 0, 0, 0);
 
-  if (end.getTime() <= now.getTime()) end.setDate(end.getDate() + 7);
+  if (end.getTime() <= now.getTime()) {
+    end.setDate(end.getDate() + 7);
+  }
+
   return end;
 }
 
@@ -53,9 +59,11 @@ function formatJoinBy(end: Date) {
 
 function formatTimeLeft(msLeft: number) {
   if (msLeft <= 0) return "0h";
+
   const totalMinutes = Math.floor(msLeft / 60000);
   const days = Math.floor(totalMinutes / (60 * 24));
   const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
+
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h`;
 }
@@ -65,7 +73,8 @@ export default function DropPage() {
   const [qtyById, setQtyById] = useState<Record<string, number>>({});
   const [statusMsg, setStatusMsg] = useState<string>("");
 
-  // Countdown (shared deadline)
+  /* ---------- Countdown State ---------- */
+
   const [nowTick, setNowTick] = useState<number>(Date.now());
   const endDate = useMemo(() => getNextFriday5pm(), []);
   const joinByText = useMemo(() => formatJoinBy(endDate), [endDate]);
@@ -80,19 +89,21 @@ export default function DropPage() {
     return formatTimeLeft(ms);
   }, [endDate, nowTick]);
 
-  // Load saved raised value on mount
+  /* ---------- Load + Persist Raised ---------- */
+
   useEffect(() => {
-    const saved = localStorage.getItem(AESOP_RAISED_KEY);
+    const saved = localStorage.getItem(LE_LABO_RAISED_KEY);
     if (saved) {
       const val = Number(saved);
       if (!Number.isNaN(val)) setRaised(val);
     }
   }, []);
 
-  // Persist raised value whenever it changes
   useEffect(() => {
-    localStorage.setItem(AESOP_RAISED_KEY, String(raised));
+    localStorage.setItem(LE_LABO_RAISED_KEY, String(raised));
   }, [raised]);
+
+  /* ---------- Cart Logic ---------- */
 
   const cartItems = useMemo(() => {
     return SKUS.map((s) => {
@@ -101,7 +112,9 @@ export default function DropPage() {
     }).filter((x) => x.qty > 0);
   }, [qtyById]);
 
-  const cartTotal = useMemo(() => cartItems.reduce((sum, x) => sum + x.lineTotal, 0), [cartItems]);
+  const cartTotal = useMemo(() => {
+    return cartItems.reduce((sum, x) => sum + x.lineTotal, 0);
+  }, [cartItems]);
 
   const percent = useMemo(() => Math.min(Math.round((raised / TARGET) * 100), 100), [raised]);
   const remaining = useMemo(() => Math.max(TARGET - raised, 0), [raised]);
@@ -156,7 +169,7 @@ export default function DropPage() {
     setRaised(DEFAULT_RAISED);
     setQtyById({});
     setStatusMsg("Demo reset to the starting amount.");
-    localStorage.setItem(AESOP_RAISED_KEY, String(DEFAULT_RAISED));
+    localStorage.setItem(LE_LABO_RAISED_KEY, String(DEFAULT_RAISED));
   }
 
   return (
@@ -187,17 +200,17 @@ export default function DropPage() {
         {/* Header */}
         <header className="mt-10">
           <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-600 shadow-sm">
-            ACTIVE DROP
+            UP NEXT
             <span className="h-1 w-1 rounded-full bg-neutral-300" />
             Time left <span className="text-neutral-900">{timeLeftText}</span>
           </div>
 
           <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-black tracking-tight">
-            Aesop Hand Wash Bundle
+            Le Labo Discovery Set
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm sm:text-base text-neutral-600 leading-relaxed">
-            Your cart total is what you’re authorizing if the drop completes, and it’s what moves the progress bar.
+            Build your cart. Your total is what you’re authorizing if the drop completes and what pushes the progress forward.
           </p>
 
           <div className="mt-2 text-xs text-neutral-500">
@@ -270,11 +283,11 @@ export default function DropPage() {
                         <div className="absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-neutral-200/50" />
                       </div>
 
-                      {sku.tag ? (
+                      {sku.tag && (
                         <div className="absolute left-3 top-3 inline-flex rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-bold text-white">
                           {sku.tag}
                         </div>
-                      ) : null}
+                      )}
                     </div>
 
                     <div className="mt-4 flex items-start justify-between gap-3">
@@ -295,7 +308,6 @@ export default function DropPage() {
                           onClick={() => dec(sku.id)}
                           className="h-9 w-10 rounded-lg text-sm font-black text-neutral-700 hover:bg-white disabled:opacity-40"
                           disabled={qty === 0}
-                          aria-label={`Decrease ${sku.name}`}
                         >
                           −
                         </button>
@@ -303,7 +315,6 @@ export default function DropPage() {
                         <button
                           onClick={() => inc(sku.id)}
                           className="h-9 w-10 rounded-lg text-sm font-black text-neutral-700 hover:bg-white"
-                          aria-label={`Increase ${sku.name}`}
                         >
                           +
                         </button>
@@ -376,11 +387,11 @@ export default function DropPage() {
                     : `Join this drop (authorize ${money(cartTotal)})`}
                 </button>
 
-                {statusMsg ? (
+                {statusMsg && (
                   <div className="mt-3 rounded-xl bg-neutral-50 border border-neutral-200 px-3 py-2 text-xs text-neutral-700">
                     {statusMsg}
                   </div>
-                ) : null}
+                )}
 
                 <button
                   onClick={resetDemo}
