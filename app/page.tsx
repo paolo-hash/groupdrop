@@ -1,147 +1,143 @@
 export default function Home() {
   return (
-    <main style={{ fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial" }}>
-      <div style={{ maxWidth: 980, margin: "0 auto", padding: "64px 20px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ fontWeight: 800, fontSize: 20 }}>groupdrop (beta)</div>
-          <div style={{ display: "flex", gap: 14, fontSize: 14 }}>
-            <a href="#drops">Drops</a>
-            <a href="#how">How it works</a>
-            <a href="#join">Join</a>
-          </div>
-        </div>
+    <main className="min-h-screen bg-white text-neutral-900">
+      <div className="mx-auto max-w-5xl px-5 py-12 md:py-16">
+        {/* Top bar */}
+        <header className="flex items-center justify-between">
+          <div className="text-lg font-extrabold tracking-tight">groupdrop (beta)</div>
 
-        <div style={{ marginTop: 64 }}>
-          <div style={{ fontSize: 56, fontWeight: 900, lineHeight: 1.05 }}>
+          <nav className="hidden gap-4 text-sm text-neutral-600 md:flex">
+            <a href="#drops" className="hover:text-neutral-900">
+              Drops
+            </a>
+            <a href="#how" className="hover:text-neutral-900">
+              How it works
+            </a>
+            <a href="#join" className="hover:text-neutral-900">
+              Join
+            </a>
+          </nav>
+        </header>
+
+        {/* Hero */}
+        <section className="mt-14 md:mt-16">
+          <h1 className="text-4xl font-black leading-tight tracking-tight md:text-6xl md:leading-[1.05]">
             Premium group buys,
-            <br />
+            <br className="hidden md:block" />
             without the chaos.
-          </div>
-          <div style={{ marginTop: 14, fontSize: 18, color: "#444", maxWidth: 640 }}>
-            Join curated drops. Watch the total climb. When we hit the target, everyone gets the deal.
-          </div>
+          </h1>
 
-          <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-neutral-600 md:text-lg">
+            Join curated drops. Watch the total climb. When we hit the target, everyone gets the deal.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <a
               href="#join"
-              style={{
-                background: "#111",
-                color: "white",
-                padding: "12px 16px",
-                borderRadius: 10,
-                textDecoration: "none",
-                fontWeight: 700,
-              }}
+              className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-neutral-800"
             >
               Join the next drop
             </a>
+
             <a
               href="#how"
-              style={{
-                border: "1px solid #ddd",
-                padding: "12px 16px",
-                borderRadius: 10,
-                textDecoration: "none",
-                fontWeight: 700,
-              }}
+              className="inline-flex items-center justify-center rounded-xl border border-neutral-200 px-4 py-3 text-sm font-extrabold text-neutral-900 hover:bg-neutral-50"
             >
               How it works
             </a>
           </div>
-        </div>
+        </section>
 
-        <div id="drops" style={{ marginTop: 64, display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 18 }}>
-          <div style={{ border: "1px solid #eee", borderRadius: 16, padding: 18 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: "#666" }}>ACTIVE DROP</div>
-            <div style={{ marginTop: 8, fontSize: 22, fontWeight: 900 }}>Aesop Hand Wash Bundle</div>
-            <div style={{ marginTop: 6, color: "#555" }}>
-              Target: <b>$5,000</b> • Ends in <b>3 days</b>
+        {/* Drops */}
+        <section id="drops" className="mt-14 grid grid-cols-1 gap-4 md:mt-16 md:grid-cols-2">
+          {/* Active Drop */}
+          <div className="rounded-2xl border border-neutral-200 p-5">
+            <div className="text-xs font-extrabold tracking-wider text-neutral-500">ACTIVE DROP</div>
+            <div className="mt-2 text-xl font-black">Aesop Hand Wash Bundle</div>
+            <div className="mt-1 text-sm text-neutral-600">
+              Target: <span className="font-bold text-neutral-900">$5,000</span> • Ends in{" "}
+              <span className="font-bold text-neutral-900">3 days</span>
             </div>
 
-            <div style={{ marginTop: 16, height: 10, background: "#eee", borderRadius: 999 }}>
-              <div style={{ width: "62%", height: "100%", background: "#111", borderRadius: 999 }} />
+            {/* Progress bar */}
+            <div className="mt-5 h-2.5 w-full rounded-full bg-neutral-200">
+              <div className="h-2.5 w-[62%] rounded-full bg-neutral-900" />
             </div>
-            <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", fontSize: 14, color: "#555" }}>
+
+            <div className="mt-3 flex items-center justify-between text-sm text-neutral-600">
               <div>
-                Raised: <b>$3,100</b>
+                Raised: <span className="font-bold text-neutral-900">$3,100</span>
               </div>
               <div>
-                62% • <b>$1,900</b> to go
+                62% • <span className="font-bold text-neutral-900">$1,900</span> to go
               </div>
             </div>
 
-            <div style={{ marginTop: 16 }}>
+            <div className="mt-5">
               <a
                 href="#join"
-                style={{
-                  display: "inline-block",
-                  background: "#111",
-                  color: "white",
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  textDecoration: "none",
-                  fontWeight: 800,
-                }}
+                className="inline-flex items-center justify-center rounded-xl bg-neutral-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-neutral-800"
               >
                 Join this drop
               </a>
             </div>
+
+            <p className="mt-4 text-xs leading-relaxed text-neutral-500">
+              You’ll see a temporary authorization. We only charge if the drop completes.
+            </p>
           </div>
 
-          <div style={{ border: "1px solid #eee", borderRadius: 16, padding: 18 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: "#666" }}>UP NEXT</div>
-            <div style={{ marginTop: 8, fontSize: 20, fontWeight: 900 }}>Le Labo Discovery Set</div>
-            <div style={{ marginTop: 6, color: "#555" }}>
-              Vote to unlock • Target <b>$7,500</b>
+          {/* Up Next */}
+          <div className="rounded-2xl border border-neutral-200 p-5">
+            <div className="text-xs font-extrabold tracking-wider text-neutral-500">UP NEXT</div>
+            <div className="mt-2 text-xl font-black">Le Labo Discovery Set</div>
+            <div className="mt-1 text-sm text-neutral-600">
+              Vote to unlock • Target <span className="font-bold text-neutral-900">$7,500</span>
             </div>
 
-            <div style={{ marginTop: 16, borderTop: "1px solid #eee", paddingTop: 14, color: "#555", fontSize: 14 }}>
+            <div className="mt-5 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-700">
               Invite a friend and you both get early access.
             </div>
           </div>
-        </div>
+        </section>
 
-        <div id="how" style={{ marginTop: 64 }}>
-          <div style={{ fontSize: 24, fontWeight: 900 }}>How it works</div>
-          <ol style={{ marginTop: 12, color: "#444", lineHeight: 1.7 }}>
-            <li>We post a curated drop with a target total.</li>
-            <li>You join (no chaos, one checkout).</li>
-            <li>If the drop hits the target before the timer ends, everyone gets the deal.</li>
+        {/* How it works */}
+        <section id="how" className="mt-14 md:mt-16">
+          <h2 className="text-2xl font-black tracking-tight">How it works</h2>
+          <ol className="mt-3 space-y-2 text-sm leading-relaxed text-neutral-700 md:text-base">
+            <li>
+              <span className="font-bold text-neutral-900">1)</span> We post a curated drop with a target total.
+            </li>
+            <li>
+              <span className="font-bold text-neutral-900">2)</span> You join with one checkout (no chaos).
+            </li>
+            <li>
+              <span className="font-bold text-neutral-900">3)</span> If the drop hits the target before the timer ends,
+              we charge and fulfill.
+            </li>
           </ol>
-        </div>
+        </section>
 
-        <div id="join" style={{ marginTop: 64, border: "1px solid #eee", borderRadius: 16, padding: 18 }}>
-          <div style={{ fontSize: 18, fontWeight: 900 }}>Get notified when new drops go live</div>
-          <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {/* Join */}
+        <section id="join" className="mt-14 rounded-2xl border border-neutral-200 p-5 md:mt-16">
+          <div className="text-lg font-black tracking-tight">Get notified when new drops go live</div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
               placeholder="you@email.com"
-              style={{
-                padding: "12px 12px",
-                borderRadius: 10,
-                border: "1px solid #ddd",
-                minWidth: 260,
-              }}
+              className="w-full rounded-xl border border-neutral-200 px-4 py-3 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-400"
             />
-            <button
-              style={{
-                background: "#111",
-                color: "white",
-                padding: "12px 16px",
-                borderRadius: 10,
-                border: "none",
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
+            <button className="rounded-xl bg-neutral-900 px-4 py-3 text-sm font-extrabold text-white hover:bg-neutral-800">
               Notify me
             </button>
           </div>
-          <div style={{ marginTop: 10, fontSize: 12, color: "#666" }}>
-            (This button doesn’t do anything yet. We’ll wire it up next.)
-          </div>
-        </div>
 
-        <div style={{ marginTop: 40, fontSize: 12, color: "#777" }}>© {new Date().getFullYear()} groupdrop</div>
+          <div className="mt-3 text-xs text-neutral-500">(We’ll wire this up to Supabase next.)</div>
+        </section>
+
+        <footer className="mt-10 text-xs text-neutral-500">
+          © {new Date().getFullYear()} groupdrop
+        </footer>
       </div>
     </main>
   );
