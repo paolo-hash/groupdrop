@@ -28,22 +28,16 @@ function money(n: number) {
   return `$${n.toLocaleString()}`;
 }
 
-/* ---------- Countdown Utilities ---------- */
-
-// Next Friday at 5:00 PM (local time)
 function getNextFriday5pm(): Date {
   const now = new Date();
   const end = new Date(now);
-  const day = end.getDay(); // Sun=0 ... Fri=5
+  const day = end.getDay();
   const daysUntilFriday = (5 - day + 7) % 7;
 
   end.setDate(end.getDate() + daysUntilFriday);
   end.setHours(17, 0, 0, 0);
 
-  if (end.getTime() <= now.getTime()) {
-    end.setDate(end.getDate() + 7);
-  }
-
+  if (end.getTime() <= now.getTime()) end.setDate(end.getDate() + 7);
   return end;
 }
 
@@ -59,11 +53,9 @@ function formatJoinBy(end: Date) {
 
 function formatTimeLeft(msLeft: number) {
   if (msLeft <= 0) return "0h";
-
   const totalMinutes = Math.floor(msLeft / 60000);
   const days = Math.floor(totalMinutes / (60 * 24));
   const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
-
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h`;
 }
@@ -72,8 +64,6 @@ export default function DropPage() {
   const [raised, setRaised] = useState<number>(DEFAULT_RAISED);
   const [qtyById, setQtyById] = useState<Record<string, number>>({});
   const [statusMsg, setStatusMsg] = useState<string>("");
-
-  /* ---------- Countdown State ---------- */
 
   const [nowTick, setNowTick] = useState<number>(Date.now());
   const endDate = useMemo(() => getNextFriday5pm(), []);
@@ -84,12 +74,12 @@ export default function DropPage() {
     return () => clearInterval(t);
   }, []);
 
-  const timeLeftText = useMemo(() => {
-    const ms = endDate.getTime() - nowTick;
-    return formatTimeLeft(ms);
-  }, [endDate, nowTick]);
+  const msLeft = endDate.getTime() - nowTick;
+  const timeLeftText = useMemo(() => formatTimeLeft(msLeft), [msLeft]);
+  const isClosingSoon = msLeft > 0 && msLeft <= 24 * 60 * 60 * 1000;
 
-  /* ---------- Load + Persist Raised ---------- */
+  const badgeText = isClosingSoon ? "CLOSING SOON" : "UP NEXT";
+  const badgeClass = isClosingSoon ? "text-amber-700" : "text-neutral-600";
 
   useEffect(() => {
     const saved = localStorage.getItem(LE_LABO_RAISED_KEY);
@@ -103,8 +93,6 @@ export default function DropPage() {
     localStorage.setItem(LE_LABO_RAISED_KEY, String(raised));
   }, [raised]);
 
-  /* ---------- Cart Logic ---------- */
-
   const cartItems = useMemo(() => {
     return SKUS.map((s) => {
       const qty = qtyById[s.id] ?? 0;
@@ -112,9 +100,7 @@ export default function DropPage() {
     }).filter((x) => x.qty > 0);
   }, [qtyById]);
 
-  const cartTotal = useMemo(() => {
-    return cartItems.reduce((sum, x) => sum + x.lineTotal, 0);
-  }, [cartItems]);
+  const cartTotal = useMemo(() => cartItems.reduce((sum, x) => sum + x.lineTotal, 0), [cartItems]);
 
   const percent = useMemo(() => Math.min(Math.round((raised / TARGET) * 100), 100), [raised]);
   const remaining = useMemo(() => Math.max(TARGET - raised, 0), [raised]);
@@ -175,7 +161,6 @@ export default function DropPage() {
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-900">
       <div className="mx-auto max-w-6xl px-5 py-10">
-        {/* Top nav */}
         <div className="flex items-center justify-between">
           <Link href="/" className="font-black text-lg tracking-tight hover:opacity-70">
             groupdrop <span className="font-semibold text-neutral-500">(beta)</span>
@@ -197,10 +182,9 @@ export default function DropPage() {
           </div>
         </div>
 
-        {/* Header */}
         <header className="mt-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-600 shadow-sm">
-            UP NEXT
+          <div className={`inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold shadow-sm ${badgeClass}`}>
+            {badgeText}
             <span className="h-1 w-1 rounded-full bg-neutral-300" />
             Time left <span className="text-neutral-900">{timeLeftText}</span>
           </div>
@@ -217,7 +201,6 @@ export default function DropPage() {
             Join by <span className="font-bold text-neutral-700">{joinByText}</span>
           </div>
 
-          {/* Progress */}
           <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -259,9 +242,7 @@ export default function DropPage() {
           </div>
         </header>
 
-        {/* Content grid */}
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
-          {/* SKU grid */}
           <section>
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="text-xl font-black tracking-tight">Available SKUs</h2>
@@ -273,10 +254,7 @@ export default function DropPage() {
                 const qty = qtyById[sku.id] ?? 0;
 
                 return (
-                  <div
-                    key={sku.id}
-                    className="group rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:shadow-md"
-                  >
+                  <div key={sku.id} className="group rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:shadow-md">
                     <div className="relative h-32 rounded-xl bg-gradient-to-b from-neutral-100 to-neutral-50 border border-neutral-200 overflow-hidden">
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition">
                         <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-neutral-200/60" />
@@ -330,7 +308,6 @@ export default function DropPage() {
             </div>
           </section>
 
-          {/* Cart */}
           <aside id="cart" className="lg:sticky lg:top-8 h-fit">
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <div className="flex items-baseline justify-between">
