@@ -82,7 +82,7 @@ export default function Home() {
         {/* Hero */}
         <section className="mt-16">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight">
-            Luxury essentials,<br className="hidden sm:block" />
+            Luxury essentials, <br className="hidden sm:block" />
             at the price the industry pays.
           </h1>
 
