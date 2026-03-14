@@ -82,12 +82,12 @@ export default function Home() {
         {/* Hero */}
         <section className="mt-16">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight">
-            Premium group buys,<br className="hidden sm:block" />
-            without the chaos.
+            Luxury essentials,<br className="hidden sm:block" />
+            at the price the industry pays.
           </h1>
 
           <p className="mt-6 text-base sm:text-lg text-neutral-600 max-w-xl">
-            Join curated drops. Watch the total climb. When we hit the target, everyone gets the deal.
+            Stop paying the retail markup. We aggregate individual demand to unlock insider pricing on brands that never go on sale.
           </p>
         </section>
 
@@ -158,9 +158,9 @@ export default function Home() {
         <section id="how" className="mt-20">
           <h2 className="text-2xl font-black">How it works</h2>
           <ol className="mt-6 space-y-3 text-neutral-700">
-            <li>1. We post a curated drop with a target total.</li>
-            <li>2. You join with one checkout.</li>
-            <li>3. If the drop hits the target, we charge and fulfill.</li>
+            <li>1. The Allocation: We curate a weekly drop from premium brands like Aesop and Le Labo.</li>
+            <li>2. The Commitment: Secure your items at insider prices. We won't charge you until the collective order is met.</li>
+            <li>3. The Fulfillment: Once the target is hit, we authorize payments and ship the goods directly to your door.</li>
           </ol>
         </section>
 
