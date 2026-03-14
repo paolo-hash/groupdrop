@@ -2,114 +2,153 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { supabase } from "../../lib/supabaseClient";
+
+type RawDrop = {
+  id: string;
+  slug: string;
+  name?: string | null;
+  title?: string | null;
+  target?: number | string | null;
+  raised?: number | string | null;
+  target_cents?: number | string | null;
+  raised_cents?: number | string | null;
+};
+
+type NormalizedDrop = {
+  id: string;
+  slug: string;
+  name: string;
+  targetCents: number;
+  raisedCents: number;
+  usesCentsColumns: boolean;
+};
 
 type Sku = {
   id: string;
   name: string;
-  subtitle: string;
-  price: number;
-  tag?: string;
+  subtitle: string | null;
+  price_cents: number;
+  tag?: string | null;
+  sort_order: number;
 };
 
-const LE_LABO_RAISED_KEY = "groupdrop:raised:lelabo";
-const TARGET = 7500;
-const DEFAULT_RAISED = 900;
-
-const SKUS: Sku[] = [
-  { id: "discovery-set", name: "Discovery Set", subtitle: "17 samples • Best intro", price: 79, tag: "Popular" },
-  { id: "santal-33", name: "Santal 33", subtitle: "15mL • Travel spray", price: 89, tag: "Icon" },
-  { id: "another-13", name: "Another 13", subtitle: "15mL • Travel spray", price: 89 },
-  { id: "the-matcha-26", name: "Thé Matcha 26", subtitle: "15mL • Travel spray", price: 89 },
-  { id: "hand-pomade", name: "Hand Pomade", subtitle: "55mL • Light hydration", price: 29 },
-  { id: "shipping-protection", name: "Shipping Protection", subtitle: "Optional • Peace of mind", price: 4 },
-];
-
-function money(n: number) {
-  return `$${n.toLocaleString()}`;
+function toNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
-function getNextFriday5pm(): Date {
-  const now = new Date();
-  const end = new Date(now);
-  const day = end.getDay();
-  const daysUntilFriday = (5 - day + 7) % 7;
+function normalizeDrop(row: RawDrop): NormalizedDrop {
+  const usesCentsColumns =
+    row.target_cents !== undefined || row.raised_cents !== undefined;
 
-  end.setDate(end.getDate() + daysUntilFriday);
-  end.setHours(17, 0, 0, 0);
+  const targetCents = usesCentsColumns
+    ? toNumber(row.target_cents)
+    : Math.round(toNumber(row.target) * 100);
 
-  if (end.getTime() <= now.getTime()) end.setDate(end.getDate() + 7);
-  return end;
+  const raisedCents = usesCentsColumns
+    ? toNumber(row.raised_cents)
+    : Math.round(toNumber(row.raised) * 100);
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.title || row.name || "Untitled Drop",
+    targetCents,
+    raisedCents,
+    usesCentsColumns,
+  };
 }
 
-function formatJoinBy(end: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZoneName: "short",
-  }).format(end);
+function moneyFromCents(cents: number) {
+  const safe = Number.isFinite(cents) ? cents : 0;
+  return `$${(safe / 100).toLocaleString()}`;
 }
 
-function formatTimeLeft(msLeft: number) {
-  if (msLeft <= 0) return "0h";
-  const totalMinutes = Math.floor(msLeft / 60000);
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  return `${hours}h`;
-}
-
-export default function DropPage() {
-  const [raised, setRaised] = useState<number>(DEFAULT_RAISED);
+export default function LeLaboPage() {
+  const [drop, setDrop] = useState<NormalizedDrop | null>(null);
+  const [skus, setSkus] = useState<Sku[]>([]);
   const [qtyById, setQtyById] = useState<Record<string, number>>({});
-  const [statusMsg, setStatusMsg] = useState<string>("");
+  const [statusMsg, setStatusMsg] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [nowTick, setNowTick] = useState<number>(Date.now());
-  const endDate = useMemo(() => getNextFriday5pm(), []);
-  const joinByText = useMemo(() => formatJoinBy(endDate), [endDate]);
+  async function fetchData() {
+    setLoading(true);
+    setStatusMsg("");
 
-  useEffect(() => {
-    const t = setInterval(() => setNowTick(Date.now()), 60_000);
-    return () => clearInterval(t);
-  }, []);
+    const { data: dropData, error: dropError } = await supabase
+      .from("drops")
+      .select("*")
+      .eq("slug", "lelabo")
+      .maybeSingle();
 
-  const msLeft = endDate.getTime() - nowTick;
-  const timeLeftText = useMemo(() => formatTimeLeft(msLeft), [msLeft]);
-  const isClosingSoon = msLeft > 0 && msLeft <= 24 * 60 * 60 * 1000;
-
-  const badgeText = isClosingSoon ? "CLOSING SOON" : "UP NEXT";
-  const badgeClass = isClosingSoon ? "text-amber-700" : "text-neutral-600";
-
-  useEffect(() => {
-    const saved = localStorage.getItem(LE_LABO_RAISED_KEY);
-    if (saved) {
-      const val = Number(saved);
-      if (!Number.isNaN(val)) setRaised(val);
+    if (dropError || !dropData) {
+      console.error("Could not load Le Labo drop:", dropError);
+      setStatusMsg("Could not load drop.");
+      setLoading(false);
+      return;
     }
-  }, []);
+
+    const normalizedDrop = normalizeDrop(dropData as RawDrop);
+    setDrop(normalizedDrop);
+
+    const { data: skuData, error: skuError } = await supabase
+      .from("drop_skus")
+      .select("id,name,subtitle,price_cents,tag,sort_order")
+      .eq("drop_id", normalizedDrop.id)
+      .order("sort_order", { ascending: true });
+
+    if (skuError) {
+      console.error("Could not load Le Labo SKUs:", skuError);
+      setStatusMsg("Could not load SKUs.");
+      setLoading(false);
+      return;
+    }
+
+    setSkus((skuData ?? []) as Sku[]);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    localStorage.setItem(LE_LABO_RAISED_KEY, String(raised));
-  }, [raised]);
+    fetchData();
+  }, []);
 
   const cartItems = useMemo(() => {
-    return SKUS.map((s) => {
-      const qty = qtyById[s.id] ?? 0;
-      return { sku: s, qty, lineTotal: qty * s.price };
-    }).filter((x) => x.qty > 0);
-  }, [qtyById]);
+    return skus
+      .map((s) => {
+        const qty = qtyById[s.id] ?? 0;
+        return {
+          sku: s,
+          qty,
+          lineTotal: qty * toNumber(s.price_cents),
+        };
+      })
+      .filter((x) => x.qty > 0);
+  }, [skus, qtyById]);
 
-  const cartTotal = useMemo(() => cartItems.reduce((sum, x) => sum + x.lineTotal, 0), [cartItems]);
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, x) => sum + x.lineTotal, 0),
+    [cartItems]
+  );
 
-  const percent = useMemo(() => Math.min(Math.round((raised / TARGET) * 100), 100), [raised]);
-  const remaining = useMemo(() => Math.max(TARGET - raised, 0), [raised]);
+  const percent = useMemo(() => {
+    if (!drop || drop.targetCents <= 0) return 0;
+    return Math.min(
+      Math.round((drop.raisedCents / drop.targetCents) * 100),
+      100
+    );
+  }, [drop]);
 
-  const previewRaised = Math.min(raised + cartTotal, TARGET);
-  const previewPercent = Math.min(Math.round((previewRaised / TARGET) * 100), 100);
+  const remaining = useMemo(() => {
+    if (!drop) return 0;
+    return Math.max(drop.targetCents - drop.raisedCents, 0);
+  }, [drop]);
 
   function inc(id: string) {
-    setQtyById((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    setQtyById((prev) => ({
+      ...prev,
+      [id]: (prev[id] ?? 0) + 1,
+    }));
     setStatusMsg("");
   }
 
@@ -118,8 +157,10 @@ export default function DropPage() {
       const next = { ...prev };
       const current = next[id] ?? 0;
       const newVal = Math.max(current - 1, 0);
+
       if (newVal === 0) delete next[id];
       else next[id] = newVal;
+
       return next;
     });
     setStatusMsg("");
@@ -130,49 +171,86 @@ export default function DropPage() {
     setStatusMsg("");
   }
 
-  function handleJoin() {
-    if (raised >= TARGET) return;
+  async function handleJoin() {
+    if (!drop) return;
 
     if (cartTotal <= 0) {
       setStatusMsg("Add items to your cart to join.");
       return;
     }
 
-    const nextRaised = Math.min(raised + cartTotal, TARGET);
-    const delta = nextRaised - raised;
+    const nextRaisedCents = Math.min(
+      drop.raisedCents + cartTotal,
+      drop.targetCents
+    );
 
-    setRaised(nextRaised);
+    const previousDrop = drop;
+
+    setDrop({
+      ...drop,
+      raisedCents: nextRaisedCents,
+    });
+
     clearCart();
 
-    setStatusMsg(
-      nextRaised >= TARGET
-        ? `Joined. ${money(delta)} added. Target reached.`
-        : `Joined. ${money(delta)} added to the drop total.`
+    const updatePayload = drop.usesCentsColumns
+      ? { raised_cents: nextRaisedCents }
+      : { raised: nextRaisedCents / 100 };
+
+    const { error } = await supabase
+      .from("drops")
+      .update(updatePayload)
+      .eq("id", drop.id);
+
+    if (error) {
+      console.error(error);
+      setDrop(previousDrop);
+      setStatusMsg("Something went wrong. Try again.");
+      return;
+    }
+
+    setStatusMsg("Joined successfully.");
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-neutral-50 text-neutral-900 flex items-center justify-center">
+        <div className="text-sm text-neutral-500">Loading drop…</div>
+      </main>
     );
   }
 
-  function resetDemo() {
-    setRaised(DEFAULT_RAISED);
-    setQtyById({});
-    setStatusMsg("Demo reset to the starting amount.");
-    localStorage.setItem(LE_LABO_RAISED_KEY, String(DEFAULT_RAISED));
+  if (!drop) {
+    return (
+      <main className="min-h-screen bg-neutral-50 text-neutral-900 flex items-center justify-center">
+        <div className="text-sm text-neutral-500">
+          {statusMsg || "Drop not found."}
+        </div>
+      </main>
+    );
   }
+
+  const reachedTarget = drop.raisedCents >= drop.targetCents;
 
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-900">
       <div className="mx-auto max-w-6xl px-5 py-10">
         <div className="flex items-center justify-between">
-          <Link href="/" className="font-black text-lg tracking-tight hover:opacity-70">
+          <Link
+            href="/"
+            className="font-black text-lg tracking-tight hover:opacity-70"
+          >
             groupdrop <span className="font-semibold text-neutral-500">(beta)</span>
           </Link>
 
           <div className="flex items-center gap-3">
             <Link
               href="/#drops"
-              className="hidden sm:inline-flex rounded-xl px-3 py-2 text-sm font-bold text-neutral-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-200 transition"
+              className="inline-flex rounded-xl px-3 py-2 text-sm font-bold text-neutral-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-200 transition"
             >
               Back to drops
             </Link>
+
             <a
               href="#cart"
               className="inline-flex rounded-xl px-3 py-2 text-sm font-bold bg-neutral-900 text-white hover:bg-neutral-800 transition"
@@ -183,61 +261,51 @@ export default function DropPage() {
         </div>
 
         <header className="mt-10">
-          <div className={`inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-xs font-bold shadow-sm ${badgeClass}`}>
-            {badgeText}
-            <span className="h-1 w-1 rounded-full bg-neutral-300" />
-            Time left <span className="text-neutral-900">{timeLeftText}</span>
+          <div className="text-xs font-black tracking-wide text-neutral-500">
+            ACTIVE DROP
           </div>
 
-          <h1 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-black tracking-tight">
-            Le Labo Discovery Set
+          <h1 className="mt-2 text-4xl sm:text-5xl md:text-6xl font-black tracking-tight">
+            {drop.name}
           </h1>
 
-          <p className="mt-3 max-w-2xl text-sm sm:text-base text-neutral-600 leading-relaxed">
+          <p className="mt-4 max-w-2xl text-sm sm:text-base text-neutral-600 leading-relaxed">
             Build your cart. Your total is what you’re authorizing if the drop completes and what pushes the progress forward.
           </p>
 
-          <div className="mt-2 text-xs text-neutral-500">
-            Join by <span className="font-bold text-neutral-700">{joinByText}</span>
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <div className="text-xs font-bold text-neutral-500">DROP PROGRESS</div>
                 <div className="mt-1 text-sm text-neutral-700">
-                  Target: <span className="font-black text-neutral-900">{money(TARGET)}</span>
+                  Target:{" "}
+                  <span className="font-black text-neutral-900">
+                    {moneyFromCents(drop.targetCents)}
+                  </span>
                 </div>
               </div>
 
               <div className="text-right">
                 <div className="text-xs font-bold text-neutral-500">RAISED</div>
                 <div className="mt-1 text-sm text-neutral-700">
-                  <span className="font-black text-neutral-900">{money(raised)}</span>{" "}
+                  <span className="font-black text-neutral-900">
+                    {moneyFromCents(drop.raisedCents)}
+                  </span>{" "}
                   <span className="text-neutral-500">({percent}%)</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-neutral-200">
-              <div className="h-full bg-neutral-900 transition-all duration-500" style={{ width: `${percent}%` }} />
+              <div
+                className="h-full bg-neutral-900 transition-all duration-500"
+                style={{ width: `${percent}%` }}
+              />
             </div>
 
             <div className="mt-3 flex items-center justify-between text-xs text-neutral-600">
-              <span>{money(remaining)} to go</span>
-              <span>Time left: {timeLeftText}</span>
-            </div>
-
-            <div className="mt-4 text-xs text-neutral-600">
-              {cartTotal > 0 ? (
-                <>
-                  If you join with this cart:{" "}
-                  <span className="font-extrabold text-neutral-900">+{money(cartTotal)}</span> →{" "}
-                  <span className="font-extrabold text-neutral-900">{previewPercent}%</span> ({money(previewRaised)})
-                </>
-              ) : (
-                <>Add items to see how your join affects progress.</>
-              )}
+              <span>{moneyFromCents(remaining)} to go</span>
+              <span>{reachedTarget ? "Target reached" : "Design mode"}</span>
             </div>
           </div>
         </header>
@@ -246,26 +314,26 @@ export default function DropPage() {
           <section>
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="text-xl font-black tracking-tight">Available SKUs</h2>
-              <div className="text-xs text-neutral-500">Tap + / − to adjust quantity</div>
+              <div className="text-xs text-neutral-500">
+                Tap + / − to adjust quantity
+              </div>
             </div>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {SKUS.map((sku) => {
+              {skus.map((sku) => {
                 const qty = qtyById[sku.id] ?? 0;
 
                 return (
-                  <div key={sku.id} className="group rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-                    <div className="relative h-32 rounded-xl bg-gradient-to-b from-neutral-100 to-neutral-50 border border-neutral-200 overflow-hidden">
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition">
-                        <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-neutral-200/60" />
-                        <div className="absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-neutral-200/50" />
-                      </div>
-
-                      {sku.tag && (
+                  <div
+                    key={sku.id}
+                    className="group rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+                  >
+                    <div className="relative h-28 rounded-xl bg-gradient-to-b from-neutral-100 to-neutral-50 border border-neutral-200 overflow-hidden">
+                      {sku.tag ? (
                         <div className="absolute left-3 top-3 inline-flex rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-bold text-white">
                           {sku.tag}
                         </div>
-                      )}
+                      ) : null}
                     </div>
 
                     <div className="mt-4 flex items-start justify-between gap-3">
@@ -275,7 +343,9 @@ export default function DropPage() {
                       </div>
 
                       <div className="text-right">
-                        <div className="text-sm font-black">{money(sku.price)}</div>
+                        <div className="text-sm font-black">
+                          {moneyFromCents(sku.price_cents)}
+                        </div>
                         <div className="text-[11px] text-neutral-500">each</div>
                       </div>
                     </div>
@@ -289,7 +359,11 @@ export default function DropPage() {
                         >
                           −
                         </button>
-                        <div className="w-10 text-center text-sm font-black">{qty}</div>
+
+                        <div className="w-10 text-center text-sm font-black">
+                          {qty}
+                        </div>
+
                         <button
                           onClick={() => inc(sku.id)}
                           className="h-9 w-10 rounded-lg text-sm font-black text-neutral-700 hover:bg-white"
@@ -299,7 +373,10 @@ export default function DropPage() {
                       </div>
 
                       <div className="text-xs text-neutral-500">
-                        Line: <span className="font-bold text-neutral-800">{money(qty * sku.price)}</span>
+                        Line:{" "}
+                        <span className="font-bold text-neutral-800">
+                          {moneyFromCents(qty * sku.price_cents)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -314,7 +391,7 @@ export default function DropPage() {
                 <h3 className="text-lg font-black tracking-tight">Your cart</h3>
                 <button
                   onClick={clearCart}
-                  className="text-xs font-bold text-neutral-500 hover:text-neutral-900"
+                  className="text-xs font-bold text-neutral-500 hover:text-neutral-900 disabled:opacity-40"
                   disabled={cartItems.length === 0}
                 >
                   Clear
@@ -332,10 +409,12 @@ export default function DropPage() {
                       <div>
                         <div className="text-sm font-bold">{sku.name}</div>
                         <div className="mt-1 text-xs text-neutral-500">
-                          {qty} × {money(sku.price)}
+                          {qty} × {moneyFromCents(sku.price_cents)}
                         </div>
                       </div>
-                      <div className="text-sm font-black">{money(lineTotal)}</div>
+                      <div className="text-sm font-black">
+                        {moneyFromCents(lineTotal)}
+                      </div>
                     </div>
                   ))
                 )}
@@ -344,41 +423,34 @@ export default function DropPage() {
               <div className="mt-5 border-t border-neutral-200 pt-4">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-bold text-neutral-700">Total</div>
-                  <div className="text-lg font-black">{money(cartTotal)}</div>
+                  <div className="text-lg font-black">{moneyFromCents(cartTotal)}</div>
                 </div>
 
                 <button
                   onClick={handleJoin}
-                  disabled={raised >= TARGET}
+                  disabled={reachedTarget}
                   className={[
                     "mt-4 w-full rounded-xl px-4 py-3 text-sm font-black transition",
-                    raised >= TARGET
+                    reachedTarget
                       ? "bg-neutral-200 text-neutral-500 cursor-not-allowed"
                       : "bg-neutral-900 text-white hover:bg-neutral-800",
                   ].join(" ")}
                 >
-                  {raised >= TARGET
+                  {reachedTarget
                     ? "Target reached"
                     : cartTotal <= 0
                     ? "Join this drop"
-                    : `Join this drop (authorize ${money(cartTotal)})`}
+                    : `Join this drop (authorize ${moneyFromCents(cartTotal)})`}
                 </button>
 
-                {statusMsg && (
+                {statusMsg ? (
                   <div className="mt-3 rounded-xl bg-neutral-50 border border-neutral-200 px-3 py-2 text-xs text-neutral-700">
                     {statusMsg}
                   </div>
-                )}
-
-                <button
-                  onClick={resetDemo}
-                  className="mt-3 w-full rounded-xl border border-neutral-200 bg-white px-4 py-2 text-xs font-bold text-neutral-600 hover:bg-neutral-50"
-                >
-                  Reset demo
-                </button>
+                ) : null}
 
                 <p className="mt-4 text-xs leading-relaxed text-neutral-500">
-                  You’ll see a temporary authorization. We only charge if the drop completes.
+                  Design mode: this simulates joining. In the real flow, we’ll authorize your card now and only charge if the drop completes.
                 </p>
               </div>
             </div>

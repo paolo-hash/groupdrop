@@ -2,317 +2,370 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../../lib/supabaseClient";
 
-/* ===============================
-   Supabase Client
-   (Uses your .env.local values)
-================================ */
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-/* ===============================
-   Types
-================================ */
-type Drop = {
-  id: string;
-  slug: string;
-  title: string;
-  target: number;
-  raised: number;
-  closes_at: string | null;
-};
-
-type SKU = {
+type Sku = {
   id: string;
   name: string;
-  price: number; // cents or dollars? We'll treat as dollars for now (simple).
+  subtitle: string;
+  price_cents: number;
+  tag?: string | null;
+  sort_order: number;
 };
 
-/* ===============================
-   Page
-================================ */
-export default function AesopDropPage() {
-  // --- This page is hardcoded to the "aesop" slug for now ---
-  const slug = "aesop";
+type Drop = {
+  id: string;
+  name: string;
+  slug: string;
+  target_cents: number;
+  raised_cents: number;
+};
 
+function moneyFromCents(cents: number) {
+  const safe = Number.isFinite(cents) ? cents : 0;
+  return `$${(safe / 100).toLocaleString()}`;
+}
+
+export default function AesopPage() {
   const [drop, setDrop] = useState<Drop | null>(null);
+  const [skus, setSkus] = useState<Sku[]>([]);
+  const [qtyById, setQtyById] = useState<Record<string, number>>({});
+  const [statusMsg, setStatusMsg] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  /* ===============================
-     Fake SKUs for now (Phase plan)
-     Later: pull these from Supabase too.
-  ================================= */
-  const skus: SKU[] = useMemo(
-    () => [
-      { id: "aesop-1", name: "Aesop Resurrection Hand Wash (500ml)", price: 45 },
-      { id: "aesop-2", name: "Aesop Resurrection Hand Balm (75ml)", price: 33 },
-      { id: "aesop-3", name: "Aesop Hand Care Duo (Bundle)", price: 72 },
-    ],
-    []
-  );
-
-  // quantity map: skuId -> qty
-  const [qty, setQty] = useState<Record<string, number>>({
-    "aesop-1": 1,
-    "aesop-2": 0,
-    "aesop-3": 0,
-  });
-
-  /* ===============================
-     Fetch Drop from Supabase
-================================ */
-  async function fetchDrop() {
-    setLoading(true);
-    setError(null);
-
-    const { data, error } = await supabase
-      .from("drops")
-      .select("*")
-      .eq("slug", slug)
-      .single();
-
-    if (error) {
-      setError(error.message);
-      setDrop(null);
-      setLoading(false);
-      return;
-    }
-
-    setDrop(data);
-    setLoading(false);
-  }
 
   useEffect(() => {
-    fetchDrop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    async function fetchData() {
+      setLoading(true);
+      setStatusMsg("");
+
+      const { data: dropData, error: dropError } = await supabase
+        .from("drops")
+        .select("id,name,slug,target_cents,raised_cents")
+        .eq("slug", "aesop")
+        .single();
+
+      if (dropError || !dropData) {
+        console.error(dropError);
+        setStatusMsg("Could not load drop.");
+        setLoading(false);
+        return;
+      }
+
+      setDrop(dropData);
+
+      const { data: skuData, error: skuError } = await supabase
+        .from("drop_skus")
+        .select("id,name,subtitle,price_cents,tag,sort_order,drop_id")
+        .eq("drop_id", dropData.id)
+        .order("sort_order");
+
+      if (skuError) {
+        console.error(skuError);
+        setStatusMsg("Could not load SKUs.");
+        setLoading(false);
+        return;
+      }
+
+      setSkus((skuData ?? []) as any);
+      setLoading(false);
+    }
+
+    fetchData();
   }, []);
 
-  /* ===============================
-     Cart
-================================ */
-  const cartTotal = useMemo(() => {
-    return skus.reduce((sum, item) => {
-      const q = qty[item.id] ?? 0;
-      return sum + item.price * q;
-    }, 0);
-  }, [qty, skus]);
+  const cartItems = useMemo(() => {
+    return skus
+      .map((s) => {
+        const qty = qtyById[s.id] ?? 0;
+        return { sku: s, qty, lineTotal: qty * s.price_cents };
+      })
+      .filter((x) => x.qty > 0);
+  }, [skus, qtyById]);
+
+  const cartTotal = useMemo(
+    () => cartItems.reduce((sum, x) => sum + x.lineTotal, 0),
+    [cartItems]
+  );
 
   const percent = useMemo(() => {
     if (!drop) return 0;
-    return Math.min(Math.round((drop.raised / drop.target) * 100), 100);
+    if (!drop.target_cents || drop.target_cents <= 0) return 0;
+    return Math.min(Math.round((drop.raised_cents / drop.target_cents) * 100), 100);
   }, [drop]);
 
   const remaining = useMemo(() => {
     if (!drop) return 0;
-    return Math.max(drop.target - drop.raised, 0);
+    return Math.max(drop.target_cents - drop.raised_cents, 0);
   }, [drop]);
 
   function inc(id: string) {
-    setQty((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    setQtyById((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    setStatusMsg("");
   }
 
   function dec(id: string) {
-    setQty((prev) => ({ ...prev, [id]: Math.max((prev[id] ?? 0) - 1, 0) }));
+    setQtyById((prev) => {
+      const next = { ...prev };
+      const current = next[id] ?? 0;
+      const newVal = Math.max(current - 1, 0);
+      if (newVal === 0) delete next[id];
+      else next[id] = newVal;
+      return next;
+    });
+    setStatusMsg("");
   }
 
-  /* ===============================
-     Join Flow
-     IMPORTANT:
-     This writes raised += cartTotal to Supabase.
-     It uses a "read current -> update" approach.
+  function clearCart() {
+    setQtyById({});
+    setStatusMsg("");
+  }
 
-     Later (more robust):
-     use an RPC function in Supabase to do atomic increment.
-================================ */
   async function handleJoin() {
     if (!drop) return;
-    if (cartTotal <= 0) return;
-    if (drop.raised >= drop.target) return;
 
-    setJoining(true);
-    setError(null);
-
-    // 1) Re-read latest value to reduce stale updates
-    const { data: fresh, error: freshErr } = await supabase
-      .from("drops")
-      .select("id, raised, target")
-      .eq("id", drop.id)
-      .single();
-
-    if (freshErr || !fresh) {
-      setError(freshErr?.message ?? "Could not load latest drop data.");
-      setJoining(false);
+    if (cartTotal <= 0) {
+      setStatusMsg("Add items to your cart to join.");
       return;
     }
 
-    const newRaised = Math.min(fresh.raised + cartTotal, fresh.target);
+    const nextRaised = Math.min(drop.raised_cents + cartTotal, drop.target_cents);
+    const prev = drop;
 
-    // 2) Update raised in Supabase
-    const { error: updateErr } = await supabase
+    setDrop({ ...drop, raised_cents: nextRaised });
+    clearCart();
+
+    const { error } = await supabase
       .from("drops")
-      .update({ raised: newRaised })
+      .update({ raised_cents: nextRaised })
       .eq("id", drop.id);
 
-    if (updateErr) {
-      setError(updateErr.message);
-      setJoining(false);
+    if (error) {
+      console.error(error);
+      setDrop(prev);
+      setStatusMsg("Something went wrong. Try again.");
       return;
     }
 
-    // 3) Re-fetch so UI reflects new raised
-    await fetchDrop();
-    setJoining(false);
+    setStatusMsg("Joined successfully.");
   }
 
-  /* ===============================
-     UI
-================================ */
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-neutral-50 text-neutral-900 flex items-center justify-center">
+        <div className="text-sm text-neutral-500">Loading drop…</div>
+      </main>
+    );
+  }
+
+  if (!drop) {
+    return (
+      <main className="min-h-screen bg-neutral-50 text-neutral-900 flex items-center justify-center">
+        <div className="text-sm text-neutral-500">{statusMsg || "Drop not found."}</div>
+      </main>
+    );
+  }
+
+  const reachedTarget = drop.raised_cents >= drop.target_cents;
+
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-900">
-      <div className="max-w-5xl mx-auto px-5 py-10">
-        {/* Top nav */}
+      <div className="mx-auto max-w-6xl px-5 py-10">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <Link href="/" className="font-black text-lg hover:opacity-70">
-            groupdrop
+          <Link href="/" className="font-black text-lg tracking-tight hover:opacity-70">
+            groupdrop <span className="font-semibold text-neutral-500">(beta)</span>
           </Link>
-          <div className="text-xs text-neutral-500">drop</div>
+
+          <Link
+            href="/#drops"
+            className="inline-flex rounded-xl px-3 py-2 text-sm font-bold text-neutral-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-200 transition"
+          >
+            Back to drops
+          </Link>
         </div>
 
-        {/* Page Header */}
-        <div className="mt-10">
-          <div className="text-xs font-bold text-neutral-500">ACTIVE DROP</div>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-black tracking-tight">
-            {loading ? "Loading..." : drop?.title ?? "Drop not found"}
+        {/* Big title area */}
+        <header className="mt-10">
+          <div className="text-xs font-black tracking-wide text-neutral-500">ACTIVE DROP</div>
+          <h1 className="mt-2 text-4xl sm:text-5xl md:text-6xl font-black tracking-tight">
+            {drop.name}
           </h1>
 
-          {error && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-        </div>
+          <p className="mt-4 max-w-2xl text-sm sm:text-base text-neutral-600 leading-relaxed">
+            Build your cart. Your total is what you’re authorizing if the drop completes and what pushes the progress forward.
+          </p>
 
-        {/* Main content */}
-        <div className="mt-10 grid lg:grid-cols-3 gap-6">
-          {/* Left: SKU list */}
-          <section className="lg:col-span-2 bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-bold">Choose items</div>
-              <div className="text-xs text-neutral-500">Add to cart</div>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {skus.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-xl border border-neutral-200 p-4"
-                >
-                  <div>
-                    <div className="font-bold">{item.name}</div>
-                    <div className="mt-1 text-sm text-neutral-600">
-                      ${item.price.toLocaleString()}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => dec(item.id)}
-                      className="h-9 w-9 rounded-full border border-neutral-300 font-bold hover:bg-neutral-100"
-                    >
-                      −
-                    </button>
-                    <div className="w-6 text-center font-bold">
-                      {qty[item.id] ?? 0}
-                    </div>
-                    <button
-                      onClick={() => inc(item.id)}
-                      className="h-9 w-9 rounded-full border border-neutral-300 font-bold hover:bg-neutral-100"
-                    >
-                      +
-                    </button>
-                  </div>
+          {/* Progress (separate, like Le Labo) */}
+          <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold text-neutral-500">DROP PROGRESS</div>
+                <div className="mt-1 text-sm text-neutral-700">
+                  Target: <span className="font-black text-neutral-900">{moneyFromCents(drop.target_cents)}</span>
                 </div>
-              ))}
+              </div>
+
+              <div className="text-right">
+                <div className="text-xs font-bold text-neutral-500">RAISED</div>
+                <div className="mt-1 text-sm text-neutral-700">
+                  <span className="font-black text-neutral-900">{moneyFromCents(drop.raised_cents)}</span>{" "}
+                  <span className="text-neutral-500">({percent}%)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div className="h-full bg-neutral-900 transition-all duration-500" style={{ width: `${percent}%` }} />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-xs text-neutral-600">
+              <span>{moneyFromCents(remaining)} to go</span>
+              <span>{reachedTarget ? "Target reached" : "Design mode"}</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Main layout */}
+        <div className="mt-10 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
+          {/* SKUs */}
+          <section>
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className="text-xl font-black tracking-tight">Available SKUs</h2>
+              <div className="text-xs text-neutral-500">Tap + / − to adjust quantity</div>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {skus.map((sku) => {
+                const qty = qtyById[sku.id] ?? 0;
+
+                return (
+                  <div
+                    key={sku.id}
+                    className="group rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+                  >
+                    <div className="relative h-28 rounded-xl bg-gradient-to-b from-neutral-100 to-neutral-50 border border-neutral-200 overflow-hidden">
+                      {sku.tag ? (
+                        <div className="absolute left-3 top-3 inline-flex rounded-full bg-neutral-900 px-3 py-1 text-[11px] font-bold text-white">
+                          {sku.tag}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4 flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-black leading-snug">{sku.name}</div>
+                        <div className="mt-1 text-xs text-neutral-600">{sku.subtitle}</div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-sm font-black">{moneyFromCents(sku.price_cents)}</div>
+                        <div className="text-[11px] text-neutral-500">each</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="inline-flex items-center rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+                        <button
+                          onClick={() => dec(sku.id)}
+                          className="h-9 w-10 rounded-lg text-sm font-black text-neutral-700 hover:bg-white disabled:opacity-40"
+                          disabled={qty === 0}
+                        >
+                          −
+                        </button>
+                        <div className="w-10 text-center text-sm font-black">{qty}</div>
+                        <button
+                          onClick={() => inc(sku.id)}
+                          className="h-9 w-10 rounded-lg text-sm font-black text-neutral-700 hover:bg-white"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="text-xs text-neutral-500">
+                        Line:{" "}
+                        <span className="font-bold text-neutral-800">
+                          {moneyFromCents(qty * sku.price_cents)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
-          {/* Right: Summary / Join */}
-          <aside className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-            <div className="text-sm font-bold">Drop status</div>
-
-            {/* Progress Bar */}
-            <div className="mt-5 h-3 bg-neutral-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-black transition-all duration-500"
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-
-            <div className="mt-3 flex justify-between text-sm text-neutral-600">
-              <span>
-                Raised:{" "}
-                <span className="font-bold">
-                  ${drop?.raised?.toLocaleString() ?? "—"}
-                </span>
-              </span>
-              <span>
-                {percent}% •{" "}
-                <span className="font-bold">${remaining.toLocaleString()}</span>{" "}
-                to go
-              </span>
-            </div>
-
-            <div className="mt-6 rounded-xl border border-neutral-200 p-4">
-              <div className="text-xs text-neutral-500">Cart total</div>
-              <div className="mt-1 text-2xl font-black">
-                ${cartTotal.toLocaleString()}
+          {/* Cart */}
+          <aside className="lg:sticky lg:top-8 h-fit">
+            <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-lg font-black tracking-tight">Your cart</h3>
+                <button
+                  onClick={clearCart}
+                  className="text-xs font-bold text-neutral-500 hover:text-neutral-900 disabled:opacity-40"
+                  disabled={cartItems.length === 0}
+                >
+                  Clear
+                </button>
               </div>
-              <div className="mt-1 text-xs text-neutral-500">
-                This amount will be added to the drop total when you join.
+
+              <div className="mt-4 space-y-3">
+                {cartItems.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">
+                    Add items to see your cart total.
+                  </div>
+                ) : (
+                  cartItems.map(({ sku, qty, lineTotal }) => (
+                    <div key={sku.id} className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-bold">{sku.name}</div>
+                        <div className="mt-1 text-xs text-neutral-500">
+                          {qty} × {moneyFromCents(sku.price_cents)}
+                        </div>
+                      </div>
+                      <div className="text-sm font-black">{moneyFromCents(lineTotal)}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-5 border-t border-neutral-200 pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-bold text-neutral-700">Total</div>
+                  <div className="text-lg font-black">{moneyFromCents(cartTotal)}</div>
+                </div>
+
+                <button
+                  onClick={handleJoin}
+                  disabled={reachedTarget}
+                  className={[
+                    "mt-4 w-full rounded-xl px-4 py-3 text-sm font-black transition",
+                    reachedTarget
+                      ? "bg-neutral-200 text-neutral-500 cursor-not-allowed"
+                      : "bg-neutral-900 text-white hover:bg-neutral-800",
+                  ].join(" ")}
+                >
+                  {reachedTarget
+                    ? "Target reached"
+                    : cartTotal <= 0
+                    ? "Join this drop"
+                    : `Join this drop (authorize ${moneyFromCents(cartTotal)})`}
+                </button>
+
+                {statusMsg ? (
+                  <div className="mt-3 rounded-xl bg-neutral-50 border border-neutral-200 px-3 py-2 text-xs text-neutral-700">
+                    {statusMsg}
+                  </div>
+                ) : null}
+
+                <p className="mt-4 text-xs leading-relaxed text-neutral-500">
+                  Design mode: this simulates joining. In the real flow, we’ll authorize your card now and only charge if the drop completes.
+                </p>
               </div>
             </div>
-
-            {/* Join Button */}
-            <button
-              onClick={handleJoin}
-              disabled={
-                joining ||
-                loading ||
-                !drop ||
-                cartTotal <= 0 ||
-                drop.raised >= drop.target
-              }
-              className={`mt-6 w-full px-5 py-3 rounded-xl font-bold transition ${
-                joining || loading || !drop || cartTotal <= 0 || (drop && drop.raised >= drop.target)
-                  ? "bg-neutral-300 cursor-not-allowed"
-                  : "bg-black text-white hover:opacity-90"
-              }`}
-            >
-              {drop && drop.raised >= drop.target
-                ? "Target reached"
-                : cartTotal <= 0
-                ? "Add items to join"
-                : joining
-                ? "Joining..."
-                : `Join this drop (authorize $${cartTotal.toLocaleString()})`}
-            </button>
-
-            <p className="mt-4 text-xs text-neutral-500 leading-relaxed">
-              Design mode: this simulates joining. In the real flow, we’ll
-              authorize your card now and only charge if the drop completes.
-            </p>
           </aside>
         </div>
 
-        {/* Footer */}
-        <footer className="mt-12 text-xs text-neutral-500">
-          © {new Date().getFullYear()} groupdrop
-        </footer>
+        <footer className="mt-14 text-xs text-neutral-500">© {new Date().getFullYear()} groupdrop</footer>
       </div>
     </main>
   );
