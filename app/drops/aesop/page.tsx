@@ -4,22 +4,61 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabaseClient";
 
+type RawDrop = {
+  id: string;
+  slug: string;
+  name?: string | null;
+  title?: string | null;
+  target?: number | string | null;
+  raised?: number | string | null;
+  target_cents?: number | string | null;
+  raised_cents?: number | string | null;
+};
+
+type NormalizedDrop = {
+  id: string;
+  slug: string;
+  name: string;
+  targetCents: number;
+  raisedCents: number;
+  usesCentsColumns: boolean;
+};
+
 type Sku = {
   id: string;
   name: string;
-  subtitle: string;
+  subtitle: string | null;
   price_cents: number;
   tag?: string | null;
   sort_order: number;
 };
 
-type Drop = {
-  id: string;
-  name: string;
-  slug: string;
-  target_cents: number;
-  raised_cents: number;
-};
+function toNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeDrop(row: RawDrop): NormalizedDrop {
+  const usesCentsColumns =
+    row.target_cents !== undefined || row.raised_cents !== undefined;
+
+  const targetCents = usesCentsColumns
+    ? toNumber(row.target_cents)
+    : Math.round(toNumber(row.target) * 100);
+
+  const raisedCents = usesCentsColumns
+    ? toNumber(row.raised_cents)
+    : Math.round(toNumber(row.raised) * 100);
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.title || row.name || "Untitled Drop",
+    targetCents,
+    raisedCents,
+    usesCentsColumns,
+  };
+}
 
 function moneyFromCents(cents: number) {
   const safe = Number.isFinite(cents) ? cents : 0;
@@ -27,49 +66,50 @@ function moneyFromCents(cents: number) {
 }
 
 export default function AesopPage() {
-  const [drop, setDrop] = useState<Drop | null>(null);
+  const [drop, setDrop] = useState<NormalizedDrop | null>(null);
   const [skus, setSkus] = useState<Sku[]>([]);
   const [qtyById, setQtyById] = useState<Record<string, number>>({});
-  const [statusMsg, setStatusMsg] = useState<string>("");
+  const [statusMsg, setStatusMsg] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      setStatusMsg("");
+  async function fetchData() {
+    setLoading(true);
+    setStatusMsg("");
 
-      const { data: dropData, error: dropError } = await supabase
-        .from("drops")
-        .select("id,name,slug,target_cents,raised_cents")
-        .eq("slug", "aesop")
-        .single();
+    const { data: dropData, error: dropError } = await supabase
+      .from("drops")
+      .select("*")
+      .eq("slug", "aesop")
+      .maybeSingle();
 
-      if (dropError || !dropData) {
-        console.error(dropError);
-        setStatusMsg("Could not load drop.");
-        setLoading(false);
-        return;
-      }
-
-      setDrop(dropData);
-
-      const { data: skuData, error: skuError } = await supabase
-        .from("drop_skus")
-        .select("id,name,subtitle,price_cents,tag,sort_order,drop_id")
-        .eq("drop_id", dropData.id)
-        .order("sort_order");
-
-      if (skuError) {
-        console.error(skuError);
-        setStatusMsg("Could not load SKUs.");
-        setLoading(false);
-        return;
-      }
-
-      setSkus((skuData ?? []) as any);
+    if (dropError || !dropData) {
+      console.error("Could not load Aesop drop:", dropError);
+      setStatusMsg("Could not load drop.");
       setLoading(false);
+      return;
     }
 
+    const normalizedDrop = normalizeDrop(dropData as RawDrop);
+    setDrop(normalizedDrop);
+
+    const { data: skuData, error: skuError } = await supabase
+      .from("drop_skus")
+      .select("id,name,subtitle,price_cents,tag,sort_order")
+      .eq("drop_id", normalizedDrop.id)
+      .order("sort_order", { ascending: true });
+
+    if (skuError) {
+      console.error("Could not load Aesop SKUs:", skuError);
+      setStatusMsg("Could not load SKUs.");
+      setLoading(false);
+      return;
+    }
+
+    setSkus((skuData ?? []) as Sku[]);
+    setLoading(false);
+  }
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -77,7 +117,11 @@ export default function AesopPage() {
     return skus
       .map((s) => {
         const qty = qtyById[s.id] ?? 0;
-        return { sku: s, qty, lineTotal: qty * s.price_cents };
+        return {
+          sku: s,
+          qty,
+          lineTotal: qty * toNumber(s.price_cents),
+        };
       })
       .filter((x) => x.qty > 0);
   }, [skus, qtyById]);
@@ -88,18 +132,23 @@ export default function AesopPage() {
   );
 
   const percent = useMemo(() => {
-    if (!drop) return 0;
-    if (!drop.target_cents || drop.target_cents <= 0) return 0;
-    return Math.min(Math.round((drop.raised_cents / drop.target_cents) * 100), 100);
+    if (!drop || drop.targetCents <= 0) return 0;
+    return Math.min(
+      Math.round((drop.raisedCents / drop.targetCents) * 100),
+      100
+    );
   }, [drop]);
 
   const remaining = useMemo(() => {
     if (!drop) return 0;
-    return Math.max(drop.target_cents - drop.raised_cents, 0);
+    return Math.max(drop.targetCents - drop.raisedCents, 0);
   }, [drop]);
 
   function inc(id: string) {
-    setQtyById((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    setQtyById((prev) => ({
+      ...prev,
+      [id]: (prev[id] ?? 0) + 1,
+    }));
     setStatusMsg("");
   }
 
@@ -108,8 +157,10 @@ export default function AesopPage() {
       const next = { ...prev };
       const current = next[id] ?? 0;
       const newVal = Math.max(current - 1, 0);
+
       if (newVal === 0) delete next[id];
       else next[id] = newVal;
+
       return next;
     });
     setStatusMsg("");
@@ -128,20 +179,32 @@ export default function AesopPage() {
       return;
     }
 
-    const nextRaised = Math.min(drop.raised_cents + cartTotal, drop.target_cents);
-    const prev = drop;
+    const nextRaisedCents = Math.min(
+      drop.raisedCents + cartTotal,
+      drop.targetCents
+    );
 
-    setDrop({ ...drop, raised_cents: nextRaised });
+    const previousDrop = drop;
+
+    setDrop({
+      ...drop,
+      raisedCents: nextRaisedCents,
+    });
+
     clearCart();
+
+    const updatePayload = drop.usesCentsColumns
+      ? { raised_cents: nextRaisedCents }
+      : { raised: nextRaisedCents / 100 };
 
     const { error } = await supabase
       .from("drops")
-      .update({ raised_cents: nextRaised })
+      .update(updatePayload)
       .eq("id", drop.id);
 
     if (error) {
       console.error(error);
-      setDrop(prev);
+      setDrop(previousDrop);
       setStatusMsg("Something went wrong. Try again.");
       return;
     }
@@ -160,33 +223,48 @@ export default function AesopPage() {
   if (!drop) {
     return (
       <main className="min-h-screen bg-neutral-50 text-neutral-900 flex items-center justify-center">
-        <div className="text-sm text-neutral-500">{statusMsg || "Drop not found."}</div>
+        <div className="text-sm text-neutral-500">
+          {statusMsg || "Drop not found."}
+        </div>
       </main>
     );
   }
 
-  const reachedTarget = drop.raised_cents >= drop.target_cents;
+  const reachedTarget = drop.raisedCents >= drop.targetCents;
 
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-900">
       <div className="mx-auto max-w-6xl px-5 py-10">
-        {/* Header */}
         <div className="flex items-center justify-between">
-          <Link href="/" className="font-black text-lg tracking-tight hover:opacity-70">
+          <Link
+            href="/"
+            className="font-black text-lg tracking-tight hover:opacity-70"
+          >
             groupdrop <span className="font-semibold text-neutral-500">(beta)</span>
           </Link>
 
-          <Link
-            href="/#drops"
-            className="inline-flex rounded-xl px-3 py-2 text-sm font-bold text-neutral-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-200 transition"
-          >
-            Back to drops
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/#drops"
+              className="inline-flex rounded-xl px-3 py-2 text-sm font-bold text-neutral-700 hover:bg-white hover:shadow-sm border border-transparent hover:border-neutral-200 transition"
+            >
+              Back to drops
+            </Link>
+
+            <a
+              href="#cart"
+              className="inline-flex rounded-xl px-3 py-2 text-sm font-bold bg-neutral-900 text-white hover:bg-neutral-800 transition"
+            >
+              View cart
+            </a>
+          </div>
         </div>
 
-        {/* Big title area */}
         <header className="mt-10">
-          <div className="text-xs font-black tracking-wide text-neutral-500">ACTIVE DROP</div>
+          <div className="text-xs font-black tracking-wide text-neutral-500">
+            ACTIVE DROP
+          </div>
+
           <h1 className="mt-2 text-4xl sm:text-5xl md:text-6xl font-black tracking-tight">
             {drop.name}
           </h1>
@@ -195,27 +273,34 @@ export default function AesopPage() {
             Build your cart. Your total is what you’re authorizing if the drop completes and what pushes the progress forward.
           </p>
 
-          {/* Progress (separate, like Le Labo) */}
           <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <div className="text-xs font-bold text-neutral-500">DROP PROGRESS</div>
                 <div className="mt-1 text-sm text-neutral-700">
-                  Target: <span className="font-black text-neutral-900">{moneyFromCents(drop.target_cents)}</span>
+                  Target:{" "}
+                  <span className="font-black text-neutral-900">
+                    {moneyFromCents(drop.targetCents)}
+                  </span>
                 </div>
               </div>
 
               <div className="text-right">
                 <div className="text-xs font-bold text-neutral-500">RAISED</div>
                 <div className="mt-1 text-sm text-neutral-700">
-                  <span className="font-black text-neutral-900">{moneyFromCents(drop.raised_cents)}</span>{" "}
+                  <span className="font-black text-neutral-900">
+                    {moneyFromCents(drop.raisedCents)}
+                  </span>{" "}
                   <span className="text-neutral-500">({percent}%)</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-neutral-200">
-              <div className="h-full bg-neutral-900 transition-all duration-500" style={{ width: `${percent}%` }} />
+              <div
+                className="h-full bg-neutral-900 transition-all duration-500"
+                style={{ width: `${percent}%` }}
+              />
             </div>
 
             <div className="mt-3 flex items-center justify-between text-xs text-neutral-600">
@@ -225,13 +310,13 @@ export default function AesopPage() {
           </div>
         </header>
 
-        {/* Main layout */}
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.6fr_1fr]">
-          {/* SKUs */}
           <section>
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="text-xl font-black tracking-tight">Available SKUs</h2>
-              <div className="text-xs text-neutral-500">Tap + / − to adjust quantity</div>
+              <div className="text-xs text-neutral-500">
+                Tap + / − to adjust quantity
+              </div>
             </div>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -258,7 +343,9 @@ export default function AesopPage() {
                       </div>
 
                       <div className="text-right">
-                        <div className="text-sm font-black">{moneyFromCents(sku.price_cents)}</div>
+                        <div className="text-sm font-black">
+                          {moneyFromCents(sku.price_cents)}
+                        </div>
                         <div className="text-[11px] text-neutral-500">each</div>
                       </div>
                     </div>
@@ -272,7 +359,11 @@ export default function AesopPage() {
                         >
                           −
                         </button>
-                        <div className="w-10 text-center text-sm font-black">{qty}</div>
+
+                        <div className="w-10 text-center text-sm font-black">
+                          {qty}
+                        </div>
+
                         <button
                           onClick={() => inc(sku.id)}
                           className="h-9 w-10 rounded-lg text-sm font-black text-neutral-700 hover:bg-white"
@@ -294,8 +385,7 @@ export default function AesopPage() {
             </div>
           </section>
 
-          {/* Cart */}
-          <aside className="lg:sticky lg:top-8 h-fit">
+          <aside id="cart" className="lg:sticky lg:top-8 h-fit">
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
               <div className="flex items-baseline justify-between">
                 <h3 className="text-lg font-black tracking-tight">Your cart</h3>
@@ -322,7 +412,9 @@ export default function AesopPage() {
                           {qty} × {moneyFromCents(sku.price_cents)}
                         </div>
                       </div>
-                      <div className="text-sm font-black">{moneyFromCents(lineTotal)}</div>
+                      <div className="text-sm font-black">
+                        {moneyFromCents(lineTotal)}
+                      </div>
                     </div>
                   ))
                 )}
