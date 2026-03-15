@@ -1,641 +1,462 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
 
-/* ===============================
-   Supabase Client
-================================ */
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+/*
+  File location: app/join/page.tsx
 
-/* ===============================
-   Types
-================================ */
-type Drop = {
-  id: string;
-  slug: string;
-  title: string;
-  target: number;
-  raised: number;
-  closes_at: string;
-};
+  Linked from the "Join" nav item on the homepage.
+  Uses the exact same SHARED_STYLES design system as the drop pages —
+  same fonts, tokens, utility classes, and layout language.
+*/
 
-/* ===============================
-   Page
-================================ */
-export default function Home() {
-  const [drops, setDrops] = useState<Drop[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+const tiers = [
+  {
+    id: "essentialist",
+    name: "The Essentialist",
+    roman: "I",
+    monthly: 15,
+    annual: 120,
+    tagline: "The considered entry.",
+    features: [
+      "Access to view all drops",
+      "Join up to 2 drops per month",
+    ],
+    cta: "Start with Essentialist",
+    featured: false,
+  },
+  {
+    id: "enthusiast",
+    name: "The Enthusiast",
+    roman: "II",
+    monthly: 25,
+    annual: 240,
+    tagline: "For the discerning regular.",
+    features: [
+      "Access to view all drops",
+      "Join up to 5 drops per month",
+      "Free shipping on orders over $150",
+    ],
+    cta: "Start with Enthusiast",
+    featured: true, // highlighted tier
+  },
+  {
+    id: "curator",
+    name: "The Curator",
+    roman: "III",
+    monthly: 55,
+    annual: 600,
+    tagline: "Unrestricted access, elevated.",
+    features: [
+      "Access to view all drops",
+      "Unlimited drops per month",
+      "24-hour early access to every drop",
+      "Free shipping on all orders",
+    ],
+    cta: "Start with Curator",
+    featured: false,
+  },
+];
 
-  /* ===============================
-     Fetch Drops
-  ================================= */
-  useEffect(() => {
-    async function fetchDrops() {
-      const { data, error } = await supabase
-        .from("drops")
-        .select("*")
-        .order("created_at", { ascending: true });
+export default function JoinPage() {
+  const [billing, setBilling] = useState<"monthly" | "annual">("annual");
 
-      if (!error && data) {
-        setDrops(data);
-      }
-
-      setLoading(false);
-    }
-
-    fetchDrops();
-  }, []);
-
-  /* trigger progress animation */
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 100);
-    return () => clearTimeout(t);
-  }, []);
-
-  /* ===============================
-     Helpers
-  ================================= */
-  function getPercent(raised: number, target: number) {
-    return Math.min(Math.round((raised / target) * 100), 100);
-  }
-
-  function getRemaining(raised: number, target: number) {
-    return Math.max(target - raised, 0);
-  }
-
-  /* ===============================
-     Render
-  ================================= */
   return (
     <>
-      {/*
-        CHANGE: Added a <style> block for global font imports and custom CSS.
-        - Importing "Cormorant Garamond" (display serif) from Google Fonts for headlines —
-          gives an editorial, luxury-magazine feel.
-        - Importing "Jost" (geometric sans) for body/UI text — clean and modern without
-          feeling generic like Inter or system fonts.
-        - Defining CSS custom properties for the brand color palette so they're
-          reusable and easy to update in one place.
-        - Added a subtle grain/noise overlay via SVG filter to give surfaces texture,
-          which is a hallmark of premium brand sites.
-        - Custom scrollbar styling for a refined, on-brand touch.
-      */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap');
+      <style dangerouslySetInnerHTML={{ __html: SHARED_STYLES }} />
 
-        :root {
-          --cream: #F7F4EE;        /* warm off-white — replaces neutral-50 */
-          --parchment: #EDE9E0;    /* slightly deeper warm surface */
-          --ink: #1A1814;          /* near-black with warmth — replaces neutral-900 */
-          --ink-muted: #6B6560;    /* warm muted text — replaces neutral-500/600 */
-          --gold: #B89A6A;         /* muted antique gold accent */
-          --gold-light: #D4B896;   /* lighter gold for hover states */
-          --border: rgba(26,24,20,0.10); /* subtle warm border */
-        }
+      <main style={{ minHeight: "100vh", backgroundColor: "var(--cream)", color: "var(--ink)" }}>
 
-        /* CHANGE: Apply warm cream background and Jost as default body font */
-        body {
-          background: var(--cream);
-          font-family: 'Jost', sans-serif;
-        }
-
-        /* CHANGE: Cormorant Garamond utility class for display headings */
-        .font-display {
-          font-family: 'Cormorant Garamond', Georgia, serif;
-        }
-
-        /* CHANGE: Grain texture overlay — adds depth and luxury feel to card surfaces */
-        .grain::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-          border-radius: inherit;
-          pointer-events: none;
-          opacity: 0.4;
-        }
-
-        /* CHANGE: Slim custom scrollbar — refined detail on desktop */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: var(--cream); }
-        ::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
-
-        /* CHANGE: Animated gold underline for nav links on hover */
-        .nav-link {
-          position: relative;
-          letter-spacing: 0.12em;
-          font-size: 11px;
-          font-weight: 500;
-          text-transform: uppercase;
-          color: var(--ink-muted);
-          transition: color 0.2s;
-        }
-        .nav-link::after {
-          content: '';
-          position: absolute;
-          bottom: -2px;
-          left: 0;
-          width: 0;
-          height: 1px;
-          background: var(--gold);
-          transition: width 0.3s ease;
-        }
-        .nav-link:hover { color: var(--ink); }
-        .nav-link:hover::after { width: 100%; }
-
-        /* CHANGE: Gold progress bar fill — replaces plain black */
-        .progress-fill {
-          background: linear-gradient(90deg, var(--gold), var(--gold-light));
-          transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        /* CHANGE: Drop card hover — subtle lift + border brightening */
-        .drop-card {
-          transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-        }
-        .drop-card:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 12px 40px rgba(26,24,20,0.08);
-          border-color: var(--gold);
-        }
-
-        /* CHANGE: CTA button — gold fill with ink text, refined hover */
-        .btn-primary {
-          background: var(--gold);
-          color: var(--ink);
-          letter-spacing: 0.08em;
-          font-size: 11px;
-          font-weight: 500;
-          text-transform: uppercase;
-          padding: 12px 24px;
-          display: inline-block;
-          transition: background 0.2s ease, transform 0.15s ease;
-        }
-        .btn-primary:hover {
-          background: var(--gold-light);
-          transform: translateY(-1px);
-        }
-
-        /* CHANGE: Fade-up entrance animation for hero text */
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(18px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-up {
-          animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          opacity: 0;
-        }
-        .delay-1 { animation-delay: 0.1s; }
-        .delay-2 { animation-delay: 0.25s; }
-        .delay-3 { animation-delay: 0.4s; }
-
-        /* CHANGE: Horizontal rule in gold — used as a section divider */
-        .gold-rule {
-          border: none;
-          border-top: 1px solid var(--gold);
-          opacity: 0.35;
-          margin: 0;
-        }
-
-        /* CHANGE: Status badge — small caps treatment for "ACTIVE DROP" / "COMPLETED" */
-        .status-badge {
-          font-size: 9px;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          font-weight: 500;
-          font-family: 'Jost', sans-serif;
-        }
-
-        /* CHANGE: Step number styling for How it Works — large italic serif numeral */
-        .step-num {
-          font-family: 'Cormorant Garamond', serif;
-          font-style: italic;
-          font-size: 52px;
-          font-weight: 400;
-          line-height: 1;
-          color: var(--parchment);
-          /* Rendered large and faint so it acts as a decorative background element */
-          -webkit-text-stroke: 1px var(--gold);
-          text-stroke: 1px var(--gold);
-        }
-      `}</style>
-
-      {/*
-        CHANGE: Background changed from bg-neutral-50 to var(--cream) via body rule.
-        Text color changed from neutral-900 to var(--ink) — warmer and more refined.
-      */}
-      <main style={{ minHeight: '100vh', backgroundColor: 'var(--cream)', color: 'var(--ink)' }}>
-
-        {/*
-          CHANGE: Nav — added a thin gold border-bottom to act as a grounding line.
-          Wordmark changed to use Cormorant Garamond with tracked small-caps styling.
-          Added a subtle "beta" pill beside the wordmark rather than inline text.
-          Increased top/bottom padding for a more airy, premium feel.
-        */}
+        {/* ── Nav — identical to drop pages ─────────────────── */}
         <header style={{
-          borderBottom: '1px solid var(--border)',
-          position: 'sticky',
+          borderBottom: "1px solid var(--border)",
+          position: "sticky",
           top: 0,
           zIndex: 50,
-          backdropFilter: 'blur(12px)',
-          backgroundColor: 'rgba(247,244,238,0.88)', /* semi-transparent cream for scroll */
+          backdropFilter: "blur(12px)",
+          backgroundColor: "rgba(247,244,238,0.88)",
         }}>
-          <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '68px' }}>
-
-            {/* Wordmark */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {/*
-                CHANGE: Wordmark now uses Cormorant Garamond for a luxury editorial feel.
-                "groupdrop" set in tracking-widened small-caps style.
-              */}
-              <span className="font-display" style={{ fontSize: '22px', fontWeight: 500, letterSpacing: '0.04em', color: 'var(--ink)' }}>
+          <div style={{
+            maxWidth: "1100px", margin: "0 auto", padding: "0 28px",
+            display: "flex", justifyContent: "space-between", alignItems: "center", height: "68px",
+          }}>
+            <Link href="/" style={{ display: "flex", alignItems: "center", gap: "10px", textDecoration: "none" }}>
+              <span className="font-display" style={{ fontSize: "22px", fontWeight: 500, letterSpacing: "0.04em", color: "var(--ink)" }}>
                 groupdrop
               </span>
-              {/*
-                CHANGE: "beta" moved to a small pill badge beside the wordmark
-                instead of being appended inline — cleaner and more intentional.
-              */}
               <span style={{
-                fontSize: '8px',
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                fontWeight: 500,
-                color: 'var(--gold)',
-                border: '1px solid var(--gold)',
-                padding: '2px 6px',
-                opacity: 0.8,
+                fontSize: "8px", letterSpacing: "0.16em", textTransform: "uppercase",
+                fontWeight: 500, color: "var(--gold)", border: "1px solid var(--gold)",
+                padding: "2px 6px", opacity: 0.8,
               }}>
                 beta
               </span>
-            </div>
+            </Link>
 
-            {/* Nav links — now uppercase, tracked, with animated underline */}
-            <nav style={{ display: 'flex', gap: '36px', alignItems: 'center' }} className="hidden md:flex">
-              <a href="#drops" className="nav-link">Drops</a>
-              <a href="#how" className="nav-link">How it works</a>
-              {/* CHANGE: Updated from anchor #join to Link /join to navigate to the membership page */}
-              <Link href="/join" className="nav-link" style={{ textDecoration: 'none' }}>Join</Link>
+            <nav style={{ display: "flex", gap: "36px", alignItems: "center" }}>
+              <Link href="/#drops" className="nav-link" style={{ textDecoration: "none" }}>Drops</Link>
+              <Link href="/#how" className="nav-link" style={{ textDecoration: "none" }}>How it works</Link>
+              <Link href="/join" className="nav-link" style={{ textDecoration: "none", color: "var(--gold)" }}>Join</Link>
             </nav>
-
           </div>
         </header>
 
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 28px' }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 28px" }}>
 
-          {/*
-            CHANGE: Hero section — much more editorial.
-            - Headline uses Cormorant Garamond at a large size for drama.
-            - Italic treatment on "Luxury essentials" adds elegance.
-            - Fade-up entrance animations staggered across the three elements.
-            - Subheadline uses Jost Light (300) for contrast against the heavy serif headline.
-            - Added a thin gold horizontal rule above the headline as a decorative opener.
-            - More top padding (120px vs 96px) for greater breathing room.
-          */}
-          <section style={{ paddingTop: '120px', paddingBottom: '20px' }}>
+          {/* ── Hero ──────────────────────────────────────────── */}
+          <section style={{ paddingTop: "100px", paddingBottom: "72px" }}>
 
-            {/* Decorative gold rule + overline label */}
-            <div className="animate-fade-up" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-              <div style={{ width: '32px', height: '1px', backgroundColor: 'var(--gold)' }} />
-              <span style={{
-                fontSize: '10px',
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                color: 'var(--gold)',
-                fontWeight: 500,
-              }}>
-                Insider Access
+            {/* Overline */}
+            <div className="animate-fade-up" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px" }}>
+              <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)" }} />
+              <span style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                Membership
               </span>
             </div>
 
-            {/*
-              CHANGE: H1 uses Cormorant Garamond at ~90px on large screens.
-              Line 1 is italic to create typographic tension with the roman line 2.
-              This two-tone italic/roman pairing is a staple of luxury brand typography.
-            */}
-            <h1
-              className="font-display animate-fade-up delay-1"
-              style={{
-                fontSize: 'clamp(44px, 8vw, 92px)',
-                fontWeight: 500,
-                lineHeight: 1.02,
-                letterSpacing: '-0.01em',
-                maxWidth: '820px',
-                marginBottom: '28px',
-              }}
-            >
-              <em style={{ fontStyle: 'italic', color: 'var(--ink)' }}>Luxury essentials,</em>
+            <h1 className="font-display animate-fade-up delay-1" style={{
+              fontSize: "clamp(44px, 8vw, 92px)", fontWeight: 500,
+              lineHeight: 1.02, letterSpacing: "-0.01em", maxWidth: "720px", marginBottom: "28px",
+            }}>
+              <em style={{ fontStyle: "italic" }}>Choose your</em>
               <br />
-              <span style={{ fontStyle: 'normal' }}>at the price the industry pays.</span>
+              <span>level of access.</span>
             </h1>
 
-            {/*
-              CHANGE: Body copy uses Jost 300 (light weight) — the contrast between
-              the heavy serif headline and the light sans body is a premium typographic move.
-              Max-width tightened to create a more intentional text column.
-            */}
-            <p
-              className="animate-fade-up delay-2"
-              style={{
-                fontSize: '16px',
-                fontWeight: 300,
-                lineHeight: 1.75,
-                color: 'var(--ink-muted)',
-                maxWidth: '480px',
-                letterSpacing: '0.01em',
-              }}
-            >
-              Stop paying the retail markup. We aggregate individual demand to unlock
-              insider pricing on brands that never go on sale.
+            <p className="animate-fade-up delay-2" style={{
+              fontSize: "16px", fontWeight: 300, lineHeight: 1.75,
+              color: "var(--ink-muted)", maxWidth: "440px", letterSpacing: "0.01em",
+              marginBottom: "48px",
+            }}>
+              Every tier unlocks insider pricing on brands that never go on sale.
+              Choose how often you want to participate.
             </p>
+
+            {/* ── Billing toggle ────────────────────────────── */}
+            {/*
+              Toggle between monthly and annual billing.
+              Annual shows a savings callout to nudge toward higher LTV.
+            */}
+            <div className="animate-fade-up delay-3" style={{ display: "flex", alignItems: "center", gap: "0px" }}>
+              <div style={{
+                display: "inline-flex",
+                border: "1px solid var(--gold)",
+                borderRadius: "2px",
+                overflow: "hidden",
+                backgroundColor: "var(--parchment)",
+              }}>
+                <button
+                  onClick={() => setBilling("monthly")}
+                  style={{
+                    padding: "10px 20px",
+                    fontSize: "10px",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    fontWeight: 500,
+                    fontFamily: "inherit",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background 0.2s, color 0.2s",
+                    backgroundColor: billing === "monthly" ? "var(--gold)" : "transparent",
+                    color: billing === "monthly" ? "var(--ink)" : "var(--ink-muted)",
+                  }}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBilling("annual")}
+                  style={{
+                    padding: "10px 20px",
+                    fontSize: "10px",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    fontWeight: 500,
+                    fontFamily: "inherit",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "background 0.2s, color 0.2s",
+                    backgroundColor: billing === "annual" ? "var(--gold)" : "transparent",
+                    color: billing === "annual" ? "var(--ink)" : "var(--ink-muted)",
+                  }}
+                >
+                  Annual
+                </button>
+              </div>
+              {/* Savings callout — only shown when annual is selected */}
+              {billing === "annual" && (
+                <span style={{
+                  marginLeft: "16px",
+                  fontSize: "10px",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "var(--gold)",
+                  fontWeight: 500,
+                }}>
+                  Save up to 2 months
+                </span>
+              )}
+            </div>
 
           </section>
 
-          {/*
-            CHANGE: Section divider — thin gold rule replacing the raw gap between sections.
-            Adds visual structure and reinforces the gold accent language.
-          */}
-          <hr className="gold-rule" style={{ marginTop: '72px' }} />
+          <hr className="gold-rule" />
 
-          {/* ── Drops Section ─────────────────────────────── */}
-          {/*
-            CHANGE: Section label added above the grid — small-caps uppercase
-            with a number indicator, mimicking luxury editorial layouts.
-            Grid gap increased slightly for more breathing room between cards.
-          */}
-          <section id="drops" style={{ paddingTop: '72px', paddingBottom: '20px' }}>
+          {/* ── Tier Cards ────────────────────────────────────── */}
+          <section style={{ paddingTop: "64px", paddingBottom: "80px" }}>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
-              <div>
-                <p style={{ fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500, marginBottom: '8px' }}>
-                  Current Drops
-                </p>
-                {/*
-                  CHANGE: Section heading uses Cormorant Garamond for consistency
-                  with the hero headline — keeps the typography system cohesive.
-                */}
-                <h2 className="font-display" style={{ fontSize: '32px', fontWeight: 500, letterSpacing: '-0.01em' }}>
-                  Open allocations
-                </h2>
-              </div>
-            </div>
-
-            {loading && (
-              /*
-                CHANGE: Loading state is now a refined single line in small
-                tracked caps rather than a plain "Loading drops..." text.
-              */
-              <p style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500 }}>
-                Loading drops…
-              </p>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-              {!loading && drops.map((drop) => {
-
-                const percent = getPercent(drop.raised, drop.target);
-                const remaining = getRemaining(drop.raised, drop.target);
-                const isComplete = drop.raised >= drop.target;
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "20px",
+              alignItems: "stretch",
+            }}>
+              {tiers.map((tier, i) => {
+                const price = billing === "monthly" ? tier.monthly : Math.round(tier.annual / 12);
+                const annualTotal = tier.annual;
+                const monthlySavings = tier.monthly * 12 - annualTotal;
 
                 return (
-                  /*
-                    CHANGE: Cards redesigned from rounded-2xl white boxes with shadow
-                    to a flatter, architectural card with:
-                    - Warm white background (not pure white) using var(--cream)
-                    - A sharper rectangular shape (border-radius: 4px) — luxury brands
-                      tend toward rectilinear geometry, not soft pill shapes.
-                    - Thinner 1px border using var(--border)
-                    - Relative positioning for the grain overlay pseudo-element
-                    - Hover animation via .drop-card class
-                    - More generous internal padding
-                  */
                   <div
-                    key={drop.id}
-                    className="drop-card grain"
-                    style={{
-                      backgroundColor: '#FDFAF5', /* slightly warmer than pure white */
-                      border: '1px solid var(--border)',
-                      borderRadius: '4px',
-                      padding: '32px',
-                      position: 'relative',
-                      overflow: 'hidden',
-                    }}
+                    key={tier.id}
+                    className="animate-fade-up"
+                    style={{ animationDelay: i * 0.12 + "s" }}
                   >
-
-                    {/*
-                      CHANGE: Status badge — uses .status-badge class for small-caps treatment.
-                      Completed drops get a gold color; active drops get muted ink.
-                      The small decorative dot before the text is a luxury detail.
-                    */}
-                    <div className="status-badge" style={{
-                      color: isComplete ? 'var(--gold)' : 'var(--ink-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      marginBottom: '16px',
-                    }}>
-                      <span style={{
-                        width: '5px',
-                        height: '5px',
-                        borderRadius: '50%',
-                        backgroundColor: isComplete ? 'var(--gold)' : 'var(--ink-muted)',
-                        display: 'inline-block',
-                        opacity: isComplete ? 1 : 0.5,
-                      }} />
-                      {isComplete ? "Completed" : "Active Drop"}
-                    </div>
-
-                    {/*
-                      CHANGE: Drop title uses Cormorant Garamond for an editorial headline feel.
-                      Larger, more commanding presence with tighter line-height.
-                    */}
-                    <h2 className="font-display" style={{
-                      fontSize: '26px',
-                      fontWeight: 500,
-                      lineHeight: 1.15,
-                      letterSpacing: '-0.01em',
-                      marginBottom: '24px',
-                    }}>
-                      {drop.title}
-                    </h2>
-
-                    {/*
-                      CHANGE: Target amount displayed more prominently with label/value split.
-                      The value is set larger and in a warmer tone to draw the eye.
-                    */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500 }}>
-                        Raised
-                      </span>
-                      <span style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500 }}>
-                        Target
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
-                      <span className="font-display" style={{ fontSize: '22px', fontWeight: 500 }}>
-                        ${drop.raised.toLocaleString()}
-                      </span>
-                      <span style={{ fontSize: '14px', color: 'var(--ink-muted)', fontWeight: 300 }}>
-                        ${drop.target.toLocaleString()}
-                      </span>
-                    </div>
-
-                    {/*
-                      CHANGE: Progress bar redesigned —
-                      - Thinner (4px vs 12px) for elegance
-                      - Gold gradient fill via .progress-fill class
-                      - Background uses parchment instead of neutral-200
-                      - Longer, smoother animation (1.2s vs 1s) with a premium easing curve
-                    */}
-                    <div style={{
-                      height: '3px',
-                      backgroundColor: 'var(--parchment)',
-                      borderRadius: '2px',
-                      overflow: 'hidden',
-                      marginBottom: '10px',
-                    }}>
-                      <div
-                        className="progress-fill"
-                        style={{ height: '100%', width: mounted ? `${percent}%` : '0%' }}
-                      />
-                    </div>
-
-                    {/*
-                      CHANGE: Percentage and remaining amount row — refined typography.
-                      Percent shown in gold when high (>= 80%) to signal urgency subtly.
-                    */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px' }}>
-                      <span style={{
-                        fontSize: '12px',
-                        fontWeight: 500,
-                        color: percent >= 80 ? 'var(--gold)' : 'var(--ink-muted)',
-                        letterSpacing: '0.04em',
-                      }}>
-                        {percent}% funded
-                      </span>
-                      <span style={{ fontSize: '12px', color: 'var(--ink-muted)', fontWeight: 300 }}>
-                        ${remaining.toLocaleString()} to go
-                      </span>
-                    </div>
-
-                    {/*
-                      CHANGE: CTA button redesigned —
-                      - Gold fill, ink text (replaces black fill)
-                      - Sharp rectangular shape (no border-radius) for a luxury/architectural feel
-                      - Uppercase tracked label via .btn-primary
-                      - Full width so it anchors the card bottom
-                    */}
-                    <Link
-                      href={`/drops/${drop.slug}`}
-                      className="btn-primary"
-                      style={{ display: 'block', textAlign: 'center', borderRadius: '2px' }}
+                    <div
+                      className="grain"
+                      style={{
+                        backgroundColor: tier.featured ? "var(--ink)" : "#FDFAF5",
+                        border: tier.featured ? "1px solid var(--gold)" : "1px solid var(--border)",
+                        borderRadius: "4px",
+                        padding: "36px 32px",
+                        position: "relative",
+                        overflow: "hidden",
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        boxSizing: "border-box",
+                      }}
                     >
-                      View allocation →
-                    </Link>
+                      {/* Featured badge */}
+                      {tier.featured && (
+                        <div style={{
+                          position: "absolute",
+                          top: "0",
+                          right: "32px",
+                          backgroundColor: "var(--gold)",
+                          color: "var(--ink)",
+                          fontSize: "8px",
+                          letterSpacing: "0.18em",
+                          textTransform: "uppercase",
+                          fontWeight: 500,
+                          padding: "4px 10px",
+                          borderRadius: "0 0 4px 4px",
+                        }}>
+                          Most Popular
+                        </div>
+                      )}
 
+                      {/* Roman numeral — decorative, same as homepage "How it works" */}
+                      <div style={{
+                        fontFamily: "'Cormorant Garamond', Georgia, serif",
+                        fontStyle: "italic",
+                        fontSize: "48px",
+                        fontWeight: 400,
+                        lineHeight: 1,
+                        marginBottom: "8px",
+                        WebkitTextStroke: "1px var(--gold)",
+                        color: "transparent",
+                        userSelect: "none",
+                        opacity: tier.featured ? 0.6 : 0.3,
+                      }}>
+                        {tier.roman}
+                      </div>
+
+                      {/* Tier name */}
+                      <h2 className="font-display" style={{
+                        fontSize: "24px",
+                        fontWeight: 500,
+                        letterSpacing: "-0.01em",
+                        marginBottom: "6px",
+                        color: tier.featured ? "var(--cream)" : "var(--ink)",
+                      }}>
+                        {tier.name}
+                      </h2>
+
+                      {/* Tagline */}
+                      <p style={{
+                        fontSize: "12px",
+                        fontWeight: 300,
+                        letterSpacing: "0.03em",
+                        color: tier.featured ? "var(--gold-light)" : "var(--ink-muted)",
+                        marginBottom: "28px",
+                      }}>
+                        {tier.tagline}
+                      </p>
+
+                      {/* Price */}
+                      <div style={{ marginBottom: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
+                          <span className="font-display" style={{
+                            fontSize: "48px",
+                            fontWeight: 500,
+                            lineHeight: 1,
+                            color: tier.featured ? "var(--cream)" : "var(--ink)",
+                          }}>
+                            ${price}
+                          </span>
+                          <span style={{
+                            fontSize: "11px",
+                            letterSpacing: "0.1em",
+                            textTransform: "uppercase",
+                            color: tier.featured ? "var(--gold-light)" : "var(--ink-muted)",
+                            fontWeight: 500,
+                            paddingBottom: "6px",
+                          }}>
+                            / mo
+                          </span>
+                        </div>
+
+                        {/* Annual total + savings line */}
+                        {billing === "annual" ? (
+                          <p style={{
+                            fontSize: "11px",
+                            fontWeight: 300,
+                            color: tier.featured ? "var(--gold-light)" : "var(--ink-muted)",
+                            letterSpacing: "0.02em",
+                            marginTop: "4px",
+                          }}>
+                            ${annualTotal} billed annually — saves ${monthlySavings}
+                          </p>
+                        ) : (
+                          <p style={{
+                            fontSize: "11px",
+                            fontWeight: 300,
+                            color: tier.featured ? "var(--gold-light)" : "var(--ink-muted)",
+                            letterSpacing: "0.02em",
+                            marginTop: "4px",
+                          }}>
+                            or ${annualTotal}/yr — save ${monthlySavings}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Divider */}
+                      <div style={{
+                        height: "1px",
+                        backgroundColor: tier.featured ? "rgba(184,154,106,0.35)" : "var(--parchment)",
+                        margin: "24px 0",
+                      }} />
+
+                      {/* Features list */}
+                      <ul style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: "0 0 32px 0",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "12px",
+                        flexGrow: 1,
+                      }}>
+                        {tier.features.map((feature) => (
+                          <li key={feature} style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "10px",
+                            fontSize: "13px",
+                            fontWeight: 300,
+                            lineHeight: 1.6,
+                            color: tier.featured ? "rgba(247,244,238,0.85)" : "var(--ink-muted)",
+                          }}>
+                            {/* Gold dash bullet — more refined than a checkmark */}
+                            <span style={{
+                              width: "12px",
+                              height: "1px",
+                              backgroundColor: "var(--gold)",
+                              flexShrink: 0,
+                              marginTop: "10px",
+                              display: "inline-block",
+                            }} />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+
+                      {/* CTA button */}
+                      {/*
+                        Featured tier: cream fill on dark card.
+                        Other tiers: standard gold btn-primary.
+                      */}
+                      <button
+                        className={tier.featured ? "" : "btn-primary"}
+                        style={{
+                          width: "100%",
+                          borderRadius: "2px",
+                          border: "none",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          ...(tier.featured ? {
+                            backgroundColor: "var(--gold)",
+                            color: "var(--ink)",
+                            fontSize: "11px",
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase" as const,
+                            fontWeight: 500,
+                            padding: "14px 24px",
+                            transition: "background 0.2s ease",
+                          } : {
+                            padding: "14px 24px",
+                          }),
+                        }}
+                      >
+                        {tier.cta} →
+                      </button>
+
+                    </div>
                   </div>
                 );
               })}
             </div>
-
           </section>
 
-          <hr className="gold-rule" style={{ marginTop: '80px' }} />
+          <hr className="gold-rule" />
 
-          {/* ── How it Works ───────────────────────────────── */}
+          {/* ── Comparison note ───────────────────────────────── */}
           {/*
-            CHANGE: "How it Works" section completely redesigned from a plain <ol>
-            into a three-column editorial layout with large italic serif step numbers
-            as decorative elements. Each step has:
-            - A large faint outlined numeral (I, II, III in Roman numerals for luxury feel)
-            - A concise headline in Cormorant Garamond
-            - A short body in Jost Light
-            This transforms a plain list into a branded editorial moment.
+            A simple reassurance line below the cards — common on pricing pages.
+            Keeps the luxury tone: no hard sell, just a quiet guarantee.
           */}
-          <section id="how" style={{ paddingTop: '72px', paddingBottom: '20px' }}>
-
-            <p style={{ fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500, marginBottom: '8px' }}>
-              The Process
+          <section style={{ paddingTop: "56px", paddingBottom: "80px", maxWidth: "560px" }}>
+            <p style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "16px" }}>
+              Good to know
             </p>
-            <h2 className="font-display" style={{ fontSize: '32px', fontWeight: 500, letterSpacing: '-0.01em', marginBottom: '56px' }}>
-              How it works
-            </h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '40px' }}>
-
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               {[
-                {
-                  num: "I",
-                  title: "The Allocation",
-                  body: "We curate a weekly drop from premium brands like Aesop and Le Labo — sourced directly from excess inventory channels.",
-                },
-                {
-                  num: "II",
-                  title: "The Commitment",
-                  body: "Secure your items at insider prices. We won't charge you until the collective order threshold is met.",
-                },
-                {
-                  num: "III",
-                  title: "The Fulfillment",
-                  body: "Once the target is hit, we authorize payments and ship the goods directly to your door.",
-                },
-              ].map((step) => (
-                <div key={step.num} style={{ position: 'relative', paddingTop: '8px' }}>
-
-                  {/*
-                    CHANGE: Large Roman numeral as a background decorative element.
-                    Uses -webkit-text-stroke so only the outline shows in gold —
-                    this is a signature luxury typography technique.
-                  */}
-                  <div className="step-num" aria-hidden="true" style={{ marginBottom: '8px' }}>
-                    {step.num}
-                  </div>
-
-                  {/*
-                    CHANGE: Step title in Cormorant Garamond for serif consistency.
-                  */}
-                  <h3 className="font-display" style={{ fontSize: '20px', fontWeight: 500, marginBottom: '12px', marginTop: '-8px' }}>
-                    {step.title}
-                  </h3>
-
-                  <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.8, color: 'var(--ink-muted)' }}>
-                    {step.body}
+                "Cancel or change your plan at any time.",
+                "You are never charged until a drop reaches its collective target.",
+                "Unused drop slots do not roll over month to month.",
+              ].map((note) => (
+                <div key={note} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                  <div style={{ width: "16px", height: "1px", backgroundColor: "var(--gold)", flexShrink: 0, marginTop: "10px" }} />
+                  <p style={{ fontSize: "14px", fontWeight: 300, lineHeight: 1.7, color: "var(--ink-muted)" }}>
+                    {note}
                   </p>
-
                 </div>
               ))}
-
             </div>
-
           </section>
 
-          {/*
-            CHANGE: Footer redesigned with a gold rule above, wordmark repeated in small
-            Cormorant Garamond, and the copyright line pushed right. More breathing room
-            above the footer (120px vs 80px). The wordmark in the footer is a common
-            luxury brand pattern (think Bottega Veneta, Celine websites).
-          */}
-          <hr className="gold-rule" style={{ marginTop: '120px' }} />
-
+          {/* ── Footer ────────────────────────────────────────── */}
+          <hr className="gold-rule" />
           <footer style={{
-            padding: '28px 0 40px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
+            padding: "28px 0 40px", display: "flex", justifyContent: "space-between",
+            alignItems: "center", flexWrap: "wrap", gap: "12px",
           }}>
-            <span className="font-display" style={{ fontSize: '15px', fontWeight: 400, letterSpacing: '0.05em', color: 'var(--ink-muted)' }}>
+            <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
               groupdrop
             </span>
-            <span style={{ fontSize: '10px', letterSpacing: '0.12em', color: 'var(--ink-muted)', fontWeight: 300 }}>
-              © {new Date().getFullYear()} groupdrop. All rights reserved.
+            <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
+              &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
             </span>
           </footer>
 
@@ -644,3 +465,48 @@ export default function Home() {
     </>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────
+   SHARED_STYLES — identical to drop page, single source of truth
+───────────────────────────────────────────────────────────── */
+const SHARED_STYLES = [
+  ":root {",
+  "  --cream: #F7F4EE;",
+  "  --parchment: #EDE9E0;",
+  "  --ink: #1A1814;",
+  "  --ink-muted: #6B6560;",
+  "  --gold: #B89A6A;",
+  "  --gold-light: #D4B896;",
+  "  --border: rgba(26,24,20,0.10);",
+  "}",
+  "body { background: var(--cream); font-family: 'Jost', sans-serif; }",
+  ".font-display { font-family: 'Cormorant Garamond', Georgia, serif; }",
+  ".grain::after {",
+  "  content: '';",
+  "  position: absolute;",
+  "  inset: 0;",
+  "  background-image: url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E\");",
+  "  border-radius: inherit;",
+  "  pointer-events: none;",
+  "  opacity: 0.4;",
+  "}",
+  "::-webkit-scrollbar { width: 4px; }",
+  "::-webkit-scrollbar-track { background: var(--cream); }",
+  "::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }",
+  ".nav-link { position: relative; letter-spacing: 0.12em; font-size: 11px; font-weight: 500; text-transform: uppercase; color: var(--ink-muted); transition: color 0.2s; }",
+  ".nav-link::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 1px; background: var(--gold); transition: width 0.3s ease; }",
+  ".nav-link:hover { color: var(--ink); }",
+  ".nav-link:hover::after { width: 100%; }",
+  ".progress-fill { background: linear-gradient(90deg, var(--gold), var(--gold-light)); transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1); }",
+  ".drop-card { transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }",
+  ".drop-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(26,24,20,0.08); border-color: var(--gold); }",
+  ".btn-primary { background: var(--gold); color: var(--ink); letter-spacing: 0.08em; font-size: 11px; font-weight: 500; text-transform: uppercase; padding: 12px 24px; display: inline-block; transition: background 0.2s ease, transform 0.15s ease; }",
+  ".btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }",
+  "@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }",
+  ".animate-fade-up { animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }",
+  ".delay-1 { animation-delay: 0.1s; }",
+  ".delay-2 { animation-delay: 0.25s; }",
+  ".delay-3 { animation-delay: 0.4s; }",
+  ".gold-rule { border: none; border-top: 1px solid var(--gold); opacity: 0.35; margin: 0; }",
+  ".status-badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; font-family: 'Jost', sans-serif; }",
+].join("\n");
