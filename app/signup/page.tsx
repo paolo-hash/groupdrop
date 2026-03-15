@@ -95,19 +95,26 @@ function SignupForm() {
       });
 
     if (profileError) {
-      console.error("Profile update error:", profileError);
-      /* Non-fatal — user is created, profile can be updated later */
+      console.error("Profile upsert error:", profileError);
     }
 
-    setLoading(false);
+    // Step 3 - Call checkout API
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tier, billing, userId: data.user.id, email }),
+    });
 
-    /*
-      Step 3 — Redirect to drops.
-      Note: Supabase sends a confirmation email by default. You can disable
-      this in Supabase Auth settings (Authentication → Email → Confirm email)
-      for a frictionless dev experience, or keep it for production security.
-    */
-    router.push("/#drops");
+    const { url, error: checkoutError } = await res.json();
+
+    if (checkoutError || !url) {
+      setError("Account created but could not start checkout. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // Step 4 - Redirect to Stripe checkout
+    window.location.href = url;
   }
 
   return (
