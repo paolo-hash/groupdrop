@@ -279,7 +279,7 @@ export default function Home() {
             <nav style={{ display: 'flex', gap: '36px', alignItems: 'center' }} className="hidden md:flex">
               <a href="#drops" className="nav-link">Drops</a>
               <a href="#how" className="nav-link">How it works</a>
-              <a href="#join" className="nav-link">Join</a>
+              <Link href="/join" className="nav-link" style={{ textDecoration: 'none' }}>Join</Link>
             </nav>
 
           </div>
