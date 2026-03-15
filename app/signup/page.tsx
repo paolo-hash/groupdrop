@@ -17,7 +17,6 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-// Correct — app/signup/ → up one level → app/ → lib/
 import { supabase } from "../lib/supabaseClient";
 
 const TIER_LABELS: Record<string, string> = {
@@ -87,12 +86,13 @@ function SignupForm() {
     */
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({
+      .upsert({
+        id: data.user.id,
+        email,
         full_name: fullName,
         tier,
         billing_cycle: billing,
-      })
-      .eq("id", data.user.id);
+      });
 
     if (profileError) {
       console.error("Profile update error:", profileError);
