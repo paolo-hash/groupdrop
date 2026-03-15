@@ -30,6 +30,7 @@ type Drop = {
 export default function Home() {
   const [drops, setDrops] = useState<Drop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   /* ===============================
      Fetch Drops
@@ -51,6 +52,12 @@ export default function Home() {
     fetchDrops();
   }, []);
 
+  /* trigger progress animation */
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 100);
+    return () => clearTimeout(t);
+  }, []);
+
   /* ===============================
      Helpers
   ================================= */
@@ -67,7 +74,7 @@ export default function Home() {
   ================================= */
   return (
     <main className="min-h-screen bg-neutral-50 text-neutral-900">
-      <div className="max-w-5xl mx-auto px-5 py-14">
+      <div className="max-w-6xl mx-auto px-5 py-16">
 
         {/* Header */}
         <div className="flex justify-between items-center">
@@ -81,21 +88,21 @@ export default function Home() {
         </div>
 
         {/* Hero */}
-        <section className="mt-16">
+        <section className="mt-24">
 
-          <h1 className="font-black tracking-tight leading-[1.05] text-[34px] sm:text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="font-black tracking-tight leading-[1.03] text-[34px] sm:text-5xl md:text-6xl lg:text-7xl max-w-3xl">
             <span className="whitespace-nowrap">Luxury essentials,</span>{" "}
             <span className="sm:block">at the price the industry pays.</span>
           </h1>
 
-          <p className="mt-6 text-[15px] sm:text-lg text-neutral-600 max-w-xl leading-relaxed">
+          <p className="mt-7 text-[15px] sm:text-lg text-neutral-600 max-w-2xl leading-relaxed">
             Stop paying the retail markup. We aggregate individual demand to unlock insider pricing on brands that never go on sale.
           </p>
 
         </section>
 
         {/* Drops Section */}
-        <section id="drops" className="mt-20 grid md:grid-cols-2 gap-6">
+        <section id="drops" className="mt-28 grid md:grid-cols-2 gap-6">
 
           {loading && <div>Loading drops...</div>}
 
@@ -128,8 +135,10 @@ export default function Home() {
                 {/* Progress Bar */}
                 <div className="mt-6 h-3 bg-neutral-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-black transition-all duration-500"
-                    style={{ width: `${percent}%` }}
+                    className="h-full bg-black transition-all duration-1000 ease-out"
+                    style={{
+                      width: mounted ? `${percent}%` : "0%"
+                    }}
                   />
                 </div>
 
@@ -164,11 +173,11 @@ export default function Home() {
         </section>
 
         {/* How it Works */}
-        <section id="how" className="mt-20">
+        <section id="how" className="mt-28">
 
           <h2 className="text-2xl font-black">How it works</h2>
 
-          <ol className="mt-6 space-y-3 text-neutral-700">
+          <ol className="mt-6 space-y-3 text-neutral-700 max-w-xl">
 
             <li>
               1. The Allocation: We curate a weekly drop from premium brands like Aesop and Le Labo.
@@ -187,7 +196,7 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="mt-16 text-xs text-neutral-500">
+        <footer className="mt-20 text-xs text-neutral-500">
           © {new Date().getFullYear()} groupdrop
         </footer>
 
