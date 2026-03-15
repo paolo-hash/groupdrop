@@ -72,6 +72,7 @@ export default function Home() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div className="font-black text-lg">groupdrop (beta)</div>
+
           <div className="hidden md:flex gap-6 text-sm">
             <a href="#drops" className="hover:opacity-60">Drops</a>
             <a href="#how" className="hover:opacity-60">How it works</a>
@@ -81,21 +82,25 @@ export default function Home() {
 
         {/* Hero */}
         <section className="mt-16">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight">
-            Luxury essentials, <br className="hidden sm:block" />
-            at the price the industry pays.
+
+          <h1 className="font-black tracking-tight leading-[1.05] text-[34px] sm:text-5xl md:text-6xl lg:text-7xl">
+            <span className="whitespace-nowrap">Luxury essentials,</span>{" "}
+            <span className="sm:block">at the price the industry pays.</span>
           </h1>
 
-          <p className="mt-6 text-base sm:text-lg text-neutral-600 max-w-xl">
+          <p className="mt-6 text-[15px] sm:text-lg text-neutral-600 max-w-xl leading-relaxed">
             Stop paying the retail markup. We aggregate individual demand to unlock insider pricing on brands that never go on sale.
           </p>
+
         </section>
 
         {/* Drops Section */}
         <section id="drops" className="mt-20 grid md:grid-cols-2 gap-6">
+
           {loading && <div>Loading drops...</div>}
 
           {!loading && drops.map((drop) => {
+
             const percent = getPercent(drop.raised, drop.target);
             const remaining = getRemaining(drop.raised, drop.target);
 
@@ -104,6 +109,7 @@ export default function Home() {
                 key={drop.id}
                 className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm"
               >
+
                 <div className="text-xs font-bold text-neutral-500">
                   {drop.raised >= drop.target ? "COMPLETED" : "ACTIVE DROP"}
                 </div>
@@ -134,6 +140,7 @@ export default function Home() {
                       ${drop.raised.toLocaleString()}
                     </span>
                   </span>
+
                   <span>
                     {percent}% •{" "}
                     <span className="font-bold">
@@ -149,25 +156,41 @@ export default function Home() {
                 >
                   View drop
                 </Link>
+
               </div>
             );
           })}
+
         </section>
 
         {/* How it Works */}
         <section id="how" className="mt-20">
+
           <h2 className="text-2xl font-black">How it works</h2>
+
           <ol className="mt-6 space-y-3 text-neutral-700">
-            <li>1. The Allocation: We curate a weekly drop from premium brands like Aesop and Le Labo.</li>
-            <li>2. The Commitment: Secure your items at insider prices. We won't charge you until the collective order is met.</li>
-            <li>3. The Fulfillment: Once the target is hit, we authorize payments and ship the goods directly to your door.</li>
+
+            <li>
+              1. The Allocation: We curate a weekly drop from premium brands like Aesop and Le Labo.
+            </li>
+
+            <li>
+              2. The Commitment: Secure your items at insider prices. We won't charge you until the collective order is met.
+            </li>
+
+            <li>
+              3. The Fulfillment: Once the target is hit, we authorize payments and ship the goods directly to your door.
+            </li>
+
           </ol>
+
         </section>
 
         {/* Footer */}
         <footer className="mt-16 text-xs text-neutral-500">
           © {new Date().getFullYear()} groupdrop
         </footer>
+
       </div>
     </main>
   );
