@@ -45,8 +45,8 @@ const tiers = [
     id: "curator",
     name: "The Curator",
     roman: "III",
-    monthly: 55,
-    annual: 600,
+    monthly: 50,
+    annual: 480,
     tagline: "Unrestricted access, elevated.",
     features: [
       "Access to view all drops",
@@ -382,19 +382,18 @@ export default function JoinPage() {
                         ))}
                       </ul>
 
-                      {/* CTA button */}
-                      {/*
-                        Featured tier: cream fill on dark card.
-                        Other tiers: standard gold btn-primary.
-                      */}
-                      <button
+                      {/* CTA button — now a Link that passes tier + billing to /signup */}
+                      <Link
+                        href={`/signup?tier=${tier.id}&billing=${billing}`}
                         className={tier.featured ? "" : "btn-primary"}
                         style={{
                           width: "100%",
                           borderRadius: "2px",
-                          border: "none",
-                          cursor: "pointer",
+                          display: "block",
+                          textAlign: "center",
+                          textDecoration: "none",
                           fontFamily: "inherit",
+                          boxSizing: "border-box",
                           ...(tier.featured ? {
                             backgroundColor: "var(--gold)",
                             color: "var(--ink)",
@@ -410,7 +409,7 @@ export default function JoinPage() {
                         }}
                       >
                         {tier.cta} →
-                      </button>
+                      </Link>
 
                     </div>
                   </div>
