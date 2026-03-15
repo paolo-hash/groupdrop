@@ -17,7 +17,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "../../lib/supabaseClient";
+// Correct — app/signup/ → up one level → app/ → lib/
+import { supabase } from "../lib/supabaseClient";
 
 const TIER_LABELS: Record<string, string> = {
   essentialist: "The Essentialist",
