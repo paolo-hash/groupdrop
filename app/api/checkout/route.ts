@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/drops?welcome=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/join`,
+      success_url: `https://groupdrop-iota.vercel.app/?welcome=true`,
+      cancel_url: `https://groupdrop-iota.vercel.app/join`,
       client_reference_id: userId,
       customer_email: email,
       metadata: {
