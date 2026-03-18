@@ -2,15 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
-
-/* ===============================
-   Supabase Client
-================================ */
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from "../lib/supabaseClient";
 
 /* ===============================
    Types
@@ -31,6 +23,11 @@ export default function Home() {
   const [drops, setDrops] = useState<Drop[]>([]);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  /*
+    CHANGE: Added user state to track auth status.
+    Used to swap "Sign in" / "Sign out" in the nav.
+  */
+  const [user, setUser] = useState<{ id: string } | null>(null);
 
   /* ===============================
      Fetch Drops
@@ -52,6 +49,25 @@ export default function Home() {
     fetchDrops();
   }, []);
 
+  /*
+    CHANGE: Check auth state on mount and listen for changes.
+    onAuthStateChange fires when the user logs in or out,
+    keeping the nav in sync without a page reload.
+  */
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   /* trigger progress animation */
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100);
@@ -67,6 +83,15 @@ export default function Home() {
 
   function getRemaining(raised: number, target: number) {
     return Math.max(target - raised, 0);
+  }
+
+  /*
+    CHANGE: Sign out handler — clears the Supabase session
+    and reloads the page so the nav updates immediately.
+  */
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    window.location.href = "/";
   }
 
   /* ===============================
@@ -279,10 +304,25 @@ export default function Home() {
             <nav style={{ display: 'flex', gap: '36px', alignItems: 'center' }} className="hidden md:flex">
               <a href="#drops" className="nav-link">Drops</a>
               <a href="#how" className="nav-link">How it works</a>
-              {/* CHANGE: Added Sign in link pointing to /login */}
-              <Link href="/login" className="nav-link" style={{ textDecoration: 'none' }}>Sign in</Link>
-              {/* CHANGE: Join link highlighted in gold to draw the eye */}
-              <Link href="/join" className="nav-link" style={{ textDecoration: 'none', color: 'var(--gold)' }}>Join</Link>
+              {/*
+                CHANGE: Auth-aware nav — shows "Sign out" button when logged in,
+                "Sign in" link when logged out. Join is always visible but hidden
+                when already a member to reduce clutter.
+              */}
+              {user ? (
+                <button
+                  onClick={handleSignOut}
+                  className="nav-link"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                >
+                  Sign out
+                </button>
+              ) : (
+                <>
+                  <Link href="/login" className="nav-link" style={{ textDecoration: 'none' }}>Sign in</Link>
+                  <Link href="/join" className="nav-link" style={{ textDecoration: 'none', color: 'var(--gold)' }}>Join</Link>
+                </>
+              )}
             </nav>
 
           </div>
