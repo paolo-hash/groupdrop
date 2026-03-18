@@ -43,6 +43,7 @@ function LoginForm() {
     }
 
     setLoading(false);
+    router.refresh();
     router.push(redirectTo);
   }
 
