@@ -43,8 +43,12 @@ function LoginForm() {
     }
 
     setLoading(false);
-    router.refresh();
-    router.push(redirectTo);
+    /*
+      FIX: Using window.location.href instead of router.push so the browser
+      does a full page reload. This ensures the middleware reads the fresh
+      Supabase session cookie before deciding whether to allow access.
+    */
+    window.location.href = redirectTo;
   }
 
   return (
