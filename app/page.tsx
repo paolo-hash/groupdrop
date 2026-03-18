@@ -279,7 +279,10 @@ export default function Home() {
             <nav style={{ display: 'flex', gap: '36px', alignItems: 'center' }} className="hidden md:flex">
               <a href="#drops" className="nav-link">Drops</a>
               <a href="#how" className="nav-link">How it works</a>
-              <Link href="/join" className="nav-link" style={{ textDecoration: 'none' }}>Join</Link>
+              {/* CHANGE: Added Sign in link pointing to /login */}
+              <Link href="/login" className="nav-link" style={{ textDecoration: 'none' }}>Sign in</Link>
+              {/* CHANGE: Join link highlighted in gold to draw the eye */}
+              <Link href="/join" className="nav-link" style={{ textDecoration: 'none', color: 'var(--gold)' }}>Join</Link>
             </nav>
 
           </div>
