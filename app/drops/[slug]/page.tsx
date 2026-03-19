@@ -72,6 +72,20 @@ function moneyFromCents(cents: number) {
 /* ─────────────────────────────────────────────────────────────
    Page
 ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   Tier drop limits
+───────────────────────────────────────────────────────────── */
+const TIER_LIMITS: Record<string, number> = {
+  essentialist: 2,
+  enthusiast: 5,
+  curator: Infinity,
+};
+
+type Profile = {
+  tier: string | null;
+  drops_used_this_month: number;
+};
+
 export default function DropPage({
   params,
 }: {
@@ -85,6 +99,8 @@ export default function DropPage({
   const [statusMsg, setStatusMsg] = useState("");
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  /* CHANGE: Added profile state to track tier and drops used this month */
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -129,6 +145,21 @@ export default function DropPage({
 
     fetchData();
   }, [slug]);
+
+  /* CHANGE: Fetch user profile to get tier and drops used this month */
+  useEffect(() => {
+    async function fetchProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("profiles")
+        .select("tier, drops_used_this_month")
+        .eq("id", user.id)
+        .single();
+      if (data) setProfile(data as Profile);
+    }
+    fetchProfile();
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100);
@@ -186,23 +217,70 @@ export default function DropPage({
       setStatusMsg("Add items to your cart to join.");
       return;
     }
+
+    /*
+      CHANGE: Drop slot enforcement.
+      Check the user has not exceeded their tier limit before joining.
+      Curators have Infinity limit so always pass.
+    */
+    if (profile) {
+      const tier = profile.tier ?? "essentialist";
+      const limit = TIER_LIMITS[tier] ?? 2;
+      const used = profile.drops_used_this_month ?? 0;
+
+      if (used >= limit) {
+        setStatusMsg(
+          tier === "essentialist"
+            ? "You have reached your 2 drop limit for this month. Upgrade to Enthusiast for 5 drops, or Curator for unlimited."
+            : "You have reached your 5 drop limit for this month. Upgrade to Curator for unlimited drops."
+        );
+        return;
+      }
+    }
+
     const nextRaisedCents = Math.min(drop.raisedCents + cartTotal, drop.targetCents);
     const previousDrop = drop;
+    const previousProfile = profile;
+
     setDrop({ ...drop, raisedCents: nextRaisedCents });
+    /*
+      CHANGE: Optimistically increment drops_used_this_month in local state
+      so the UI updates immediately without waiting for the DB call.
+    */
+    if (profile) {
+      setProfile({ ...profile, drops_used_this_month: (profile.drops_used_this_month ?? 0) + 1 });
+    }
     clearCart();
+
     const updatePayload = drop.usesCentsColumns
       ? { raised_cents: nextRaisedCents }
       : { raised: nextRaisedCents / 100 };
+
     const { error } = await supabase
       .from("drops")
       .update(updatePayload)
       .eq("id", drop.id);
+
     if (error) {
       console.error(error);
       setDrop(previousDrop);
+      setProfile(previousProfile);
       setStatusMsg("Something went wrong. Try again.");
       return;
     }
+
+    /*
+      CHANGE: Increment drops_used_this_month in Supabase after successful join.
+      Uses the Supabase RPC increment pattern to avoid race conditions.
+    */
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ drops_used_this_month: (profile?.drops_used_this_month ?? 0) + 1 })
+        .eq("id", user.id);
+    }
+
     setStatusMsg("Joined successfully.");
   }
 
@@ -281,13 +359,29 @@ export default function DropPage({
               </span>
             </Link>
 
+            {/* CHANGE: Auth-aware nav — shows Account + Sign out when logged in */}
             <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
               <Link href="/#drops" className="nav-link" style={{ textDecoration: "none" }}>
                 ← All drops
               </Link>
-              <a href="#cart" className="btn-primary" style={{ borderRadius: "2px", textDecoration: "none" }}>
-                View cart
-              </a>
+              {profile ? (
+                <>
+                  <Link href="/account" className="nav-link" style={{ textDecoration: "none" }}>
+                    Account
+                  </Link>
+                  <button
+                    onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
+                    className="nav-link"
+                    style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <a href="#cart" className="btn-primary" style={{ borderRadius: "2px", textDecoration: "none" }}>
+                  View cart
+                </a>
+              )}
             </div>
           </div>
         </header>
