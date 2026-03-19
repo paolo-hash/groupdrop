@@ -27,6 +27,7 @@ type Profile = {
   tier: string | null;
   billing_cycle: string | null;
   drops_used_this_month: number;
+  stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   created_at: string;
 };
@@ -393,9 +394,9 @@ export default function AccountPage() {
                   </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px" }}>
-                  <span style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", flexShrink: 0 }}>Subscription</span>
-                  <span style={{ fontSize: "13px", fontWeight: 500, color: profile?.stripe_subscription_id ? "var(--gold)" : "#B85450" }}>
-                    {profile?.stripe_subscription_id ? "Active" : "Inactive"}
+                  <span style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", flexShrink: 0 }}>Status</span>
+                  <span style={{ fontSize: "13px", fontWeight: 500, color: (profile?.stripe_customer_id || profile?.stripe_subscription_id) ? "var(--gold)" : "#B85450" }}>
+                    {(profile?.stripe_customer_id || profile?.stripe_subscription_id) ? "Active" : "Inactive"}
                   </span>
                 </div>
               </div>
