@@ -310,13 +310,17 @@ export default function Home() {
                 when already a member to reduce clutter.
               */}
               {user ? (
-                <button
-                  onClick={handleSignOut}
-                  className="nav-link"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-                >
-                  Sign out
-                </button>
+                <>
+                  {/* CHANGE: Added Account link for logged-in users */}
+                  <Link href="/account" className="nav-link" style={{ textDecoration: 'none' }}>Account</Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="nav-link"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                  >
+                    Sign out
+                  </button>
+                </>
               ) : (
                 <>
                   <Link href="/login" className="nav-link" style={{ textDecoration: 'none' }}>Sign in</Link>
