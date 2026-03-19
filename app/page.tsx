@@ -19,6 +19,21 @@ type Drop = {
 /* ===============================
    Page
 ================================ */
+const TIER_META: Record<string, { name: string; note: string }> = {
+  essentialist: {
+    name: "The Essentialist",
+    note: "You have access to 2 drops per month at insider pricing.",
+  },
+  enthusiast: {
+    name: "The Enthusiast",
+    note: "You have access to 5 drops per month, plus free shipping on orders over $150.",
+  },
+  curator: {
+    name: "The Curator",
+    note: "You have unlimited drops, 24-hour early access, and free shipping on every order.",
+  },
+};
+
 export default function Home() {
   const [drops, setDrops] = useState<Drop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +48,10 @@ export default function Home() {
     to re-render without needing to refetch the drops data.
   */
   const [tick, setTick] = useState(0);
+
+  /* Welcome modal state */
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [welcomeTier, setWelcomeTier] = useState<string>("essentialist");
 
   /* ===============================
      Fetch Drops
@@ -102,6 +121,30 @@ export default function Home() {
     const t = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(t);
   }, []);
+
+  /* Detect ?welcome=true after Stripe checkout and fetch the user's tier */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("welcome") !== "true") return;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      supabase
+        .from("profiles")
+        .select("tier")
+        .eq("id", data.user.id)
+        .single()
+        .then(({ data: profile }) => {
+          setWelcomeTier(profile?.tier ?? "essentialist");
+          setShowWelcome(true);
+        });
+    });
+  }, []);
+
+  function dismissWelcome() {
+    setShowWelcome(false);
+    window.history.replaceState({}, "", "/");
+  }
 
   /*
     CHANGE: Countdown ticker — updates tick every second so the
@@ -307,6 +350,84 @@ export default function Home() {
         CHANGE: Background changed from bg-neutral-50 to var(--cream) via body rule.
         Text color changed from neutral-900 to var(--ink) — warmer and more refined.
       */}
+      {/* ── Welcome modal ─────────────────────────────────────────── */}
+      {showWelcome && (() => {
+        const meta = TIER_META[welcomeTier] ?? TIER_META.essentialist;
+        return (
+          <div
+            onClick={dismissWelcome}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 100,
+              backgroundColor: "rgba(26,24,20,0.55)",
+              backdropFilter: "blur(6px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "24px",
+            }}
+          >
+            <div
+              className="grain"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: "#FDFAF5",
+                border: "1px solid var(--gold)",
+                borderRadius: "4px",
+                padding: "52px 48px",
+                position: "relative",
+                overflow: "hidden",
+                maxWidth: "480px",
+                width: "100%",
+                textAlign: "center",
+              }}
+            >
+              {/* Overline */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", marginBottom: "28px" }}>
+                <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+                <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                  Welcome to groupdrop
+                </span>
+                <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+              </div>
+
+              {/* Tier headline */}
+              <h2 className="font-display" style={{
+                fontSize: "clamp(36px, 6vw, 52px)",
+                fontWeight: 500,
+                lineHeight: 1.05,
+                letterSpacing: "-0.01em",
+                marginBottom: "20px",
+              }}>
+                <em style={{ fontStyle: "italic" }}>{meta.name}</em>
+              </h2>
+
+              {/* Tier note */}
+              <p style={{
+                fontSize: "15px",
+                fontWeight: 300,
+                lineHeight: 1.75,
+                color: "var(--ink-muted)",
+                letterSpacing: "0.01em",
+                marginBottom: "40px",
+              }}>
+                {meta.note}
+              </p>
+
+              {/* CTA */}
+              <button
+                onClick={dismissWelcome}
+                className="btn-primary"
+                style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+              >
+                View open drops →
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       <main style={{ minHeight: '100vh', backgroundColor: 'var(--cream)', color: 'var(--ink)' }}>
 
         {/*
