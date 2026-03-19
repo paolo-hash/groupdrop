@@ -122,23 +122,14 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
-  /* Detect ?welcome=true after Stripe checkout and fetch the user's tier */
+  /* Detect ?welcome=true after Stripe checkout and show the welcome modal */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("welcome") !== "true") return;
 
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return;
-      supabase
-        .from("profiles")
-        .select("tier")
-        .eq("id", data.user.id)
-        .single()
-        .then(({ data: profile }) => {
-          setWelcomeTier(profile?.tier ?? "essentialist");
-          setShowWelcome(true);
-        });
-    });
+    const tier = params.get("tier") ?? "essentialist";
+    setWelcomeTier(tier in TIER_META ? tier : "essentialist");
+    setShowWelcome(true);
   }, []);
 
   function dismissWelcome() {
