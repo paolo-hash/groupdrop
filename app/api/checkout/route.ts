@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     const mode = billing === "annual" ? "payment" : "subscription";
     const session = await stripe.checkout.sessions.create({
       mode,
+      ...(mode === "payment" && { customer_creation: "always" }),
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `https://groupdrop-iota.vercel.app/?welcome=true&tier=${tier}`,
       cancel_url: `https://groupdrop-iota.vercel.app/join`,
