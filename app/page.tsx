@@ -28,6 +28,11 @@ export default function Home() {
     Used to swap "Sign in" / "Sign out" in the nav.
   */
   const [user, setUser] = useState<{ id: string } | null>(null);
+  /*
+    CHANGE: tick state — increments every second to force the countdown
+    to re-render without needing to refetch the drops data.
+  */
+  const [tick, setTick] = useState(0);
 
   /* ===============================
      Fetch Drops
@@ -74,6 +79,15 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
+  /*
+    CHANGE: Countdown ticker — updates tick every second so the
+    countdown display stays live without a page reload.
+  */
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   /* ===============================
      Helpers
   ================================= */
@@ -83,6 +97,20 @@ export default function Home() {
 
   function getRemaining(raised: number, target: number) {
     return Math.max(target - raised, 0);
+  }
+
+  /*
+    CHANGE: Countdown helper — returns a live { days, hours, minutes, seconds }
+    object from a closes_at ISO string. Returns null if the date has passed.
+  */
+  function getCountdown(closesAt: string) {
+    const diff = new Date(closesAt).getTime() - Date.now();
+    if (diff <= 0) return null;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    return { days, hours, minutes, seconds };
   }
 
   /*
@@ -447,6 +475,9 @@ export default function Home() {
                 const percent = getPercent(drop.raised, drop.target);
                 const remaining = getRemaining(drop.raised, drop.target);
                 const isComplete = drop.raised >= drop.target;
+                /* CHANGE: Calculate countdown from closes_at — tick dependency keeps it live */
+                const countdown = drop.closes_at ? getCountdown(drop.closes_at) : null;
+                void tick; // consumed to trigger re-render each second
 
                 return (
                   /*
@@ -577,6 +608,39 @@ export default function Home() {
                       - Uppercase tracked label via .btn-primary
                       - Full width so it anchors the card bottom
                     */}
+                    {/* CHANGE: Countdown timer — shows days/hours/mins/secs until drop closes */}
+                    {!isComplete && countdown && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: '10px' }}>
+                          Closes in
+                        </p>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          {[
+                            { value: countdown.days, label: 'Days' },
+                            { value: countdown.hours, label: 'Hrs' },
+                            { value: countdown.minutes, label: 'Min' },
+                            { value: countdown.seconds, label: 'Sec' },
+                          ].map(({ value, label }) => (
+                            <div key={label} style={{ textAlign: 'center', minWidth: '40px' }}>
+                              <div className="font-display" style={{ fontSize: '28px', fontWeight: 500, lineHeight: 1, color: value === 0 ? 'var(--ink-muted)' : 'var(--ink)' }}>
+                                {String(value).padStart(2, '0')}
+                              </div>
+                              <div style={{ fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginTop: '4px' }}>
+                                {label}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Drop closed label if closes_at has passed */}
+                    {!isComplete && !countdown && (
+                      <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: '20px' }}>
+                        Drop closed
+                      </p>
+                    )}
+
                     <Link
                       href={`/drops/${drop.slug}`}
                       className="btn-primary"

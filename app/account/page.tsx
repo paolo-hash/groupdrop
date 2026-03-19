@@ -532,7 +532,7 @@ export default function AccountPage() {
 
                     {/* View drop link */}
                     <Link
-                      href={}
+                      href={"/drops/" + order.drop_slug}
                       className="nav-link"
                       style={{ display: "inline-block", textDecoration: "none", marginTop: "16px" }}
                     >

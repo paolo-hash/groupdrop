@@ -17,6 +17,8 @@ type RawDrop = {
   raised?: number | string | null;
   target_cents?: number | string | null;
   raised_cents?: number | string | null;
+  /* CHANGE: Added closes_at for countdown */
+  closes_at?: string | null;
 };
 
 type NormalizedDrop = {
@@ -26,6 +28,8 @@ type NormalizedDrop = {
   targetCents: number;
   raisedCents: number;
   usesCentsColumns: boolean;
+  /* CHANGE: Added closes_at for countdown */
+  closesAt: string | null;
 };
 
 type Sku = {
@@ -61,12 +65,25 @@ function normalizeDrop(row: RawDrop): NormalizedDrop {
     targetCents,
     raisedCents,
     usesCentsColumns,
+    /* CHANGE: Pass through closes_at for countdown */
+    closesAt: row.closes_at ?? null,
   };
 }
 
 function moneyFromCents(cents: number) {
   const safe = Number.isFinite(cents) ? cents : 0;
   return "$" + (safe / 100).toLocaleString();
+}
+
+/* CHANGE: Countdown helper — returns live days/hours/mins/secs */
+function getCountdown(closesAt: string) {
+  const diff = new Date(closesAt).getTime() - Date.now();
+  if (diff <= 0) return null;
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return { days, hours, minutes, seconds };
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -101,6 +118,8 @@ export default function DropPage({
   const [mounted, setMounted] = useState(false);
   /* CHANGE: Added profile state to track tier and drops used this month */
   const [profile, setProfile] = useState<Profile | null>(null);
+  /* CHANGE: tick state for live countdown */
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -164,6 +183,12 @@ export default function DropPage({
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100);
     return () => clearTimeout(t);
+  }, []);
+
+  /* CHANGE: Countdown ticker — updates every second */
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const cartItems = useMemo(() => {
@@ -478,6 +503,44 @@ export default function DropPage({
                   {reachedTarget ? "Target reached" : moneyFromCents(remaining) + " to go"}
                 </span>
               </div>
+
+              {/* CHANGE: Countdown — shown inside the progress card below the bar */}
+              {!reachedTarget && drop.closesAt && (() => {
+                void tick;
+                const cd = getCountdown(drop.closesAt);
+                if (!cd) return (
+                  <div style={{ marginTop: "20px", borderTop: "1px solid var(--parchment)", paddingTop: "16px" }}>
+                    <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>
+                      Drop closed
+                    </p>
+                  </div>
+                );
+                return (
+                  <div style={{ marginTop: "20px", borderTop: "1px solid var(--parchment)", paddingTop: "16px" }}>
+                    <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "12px" }}>
+                      Closes in
+                    </p>
+                    <div style={{ display: "flex", gap: "16px" }}>
+                      {[
+                        { value: cd.days, label: "Days" },
+                        { value: cd.hours, label: "Hrs" },
+                        { value: cd.minutes, label: "Min" },
+                        { value: cd.seconds, label: "Sec" },
+                      ].map(({ value, label }) => (
+                        <div key={label} style={{ textAlign: "center", minWidth: "44px" }}>
+                          <div className="font-display" style={{ fontSize: "32px", fontWeight: 500, lineHeight: 1, color: value === 0 ? "var(--ink-muted)" : "var(--ink)" }}>
+                            {String(value).padStart(2, "0")}
+                          </div>
+                          <div style={{ fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginTop: "4px" }}>
+                            {label}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
             </div>
 
           </section>
