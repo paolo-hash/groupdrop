@@ -31,6 +31,25 @@ type Profile = {
   created_at: string;
 };
 
+/* CHANGE: Added Order type for order history */
+type OrderItem = {
+  sku_id: string;
+  name: string;
+  qty: number;
+  price_cents: number;
+  line_total_cents: number;
+};
+
+type Order = {
+  id: string;
+  drop_slug: string;
+  drop_name: string;
+  items: OrderItem[];
+  total_cents: number;
+  status: string;
+  created_at: string;
+};
+
 /* ─────────────────────────────────────────────────────────────
    Helpers
 ───────────────────────────────────────────────────────────── */
@@ -66,6 +85,8 @@ export default function AccountPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /* CHANGE: Added orders state for order history */
+  const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
     async function loadProfile() {
@@ -90,6 +111,19 @@ export default function AccountPage() {
         console.error("Profile fetch error:", error);
       } else {
         setProfile(data as Profile);
+      }
+
+      /* CHANGE: Fetch order history sorted by most recent first */
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (orderError) {
+        console.error("Orders fetch error:", orderError);
+      } else {
+        setOrders((orderData ?? []) as Order[]);
       }
 
       setLoading(false);
@@ -388,6 +422,127 @@ export default function AccountPage() {
                 Sign out
               </button>
             </div>
+
+          </section>
+
+          {/* ── Order History ─────────────────────────────── */}
+          {/* CHANGE: Full order history section below the dashboard cards */}
+          <section style={{ paddingTop: "20px", paddingBottom: "80px" }}>
+
+            <p style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "8px" }}>
+              Order History
+            </p>
+            <h2 className="font-display" style={{ fontSize: "28px", fontWeight: 500, letterSpacing: "-0.01em", marginBottom: "32px" }}>
+              Your allocations
+            </h2>
+
+            {orders.length === 0 ? (
+              /* Empty state */
+              <div style={{
+                border: "1px dashed var(--gold)", borderRadius: "4px",
+                backgroundColor: "var(--parchment)", padding: "40px",
+                textAlign: "center",
+              }}>
+                <p className="font-display" style={{ fontSize: "20px", fontWeight: 500, fontStyle: "italic", marginBottom: "8px", color: "var(--ink)" }}>
+                  No orders yet.
+                </p>
+                <p style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)", marginBottom: "24px" }}>
+                  Join a drop to see your allocations here.
+                </p>
+                <Link
+                  href="/#drops"
+                  className="btn-primary"
+                  style={{ display: "inline-block", borderRadius: "2px", textDecoration: "none" }}
+                >
+                  View open drops →
+                </Link>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {orders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="grain"
+                    style={{
+                      backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
+                      borderRadius: "4px", padding: "28px 32px",
+                      position: "relative", overflow: "hidden",
+                    }}
+                  >
+                    {/* Order header */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+                      <div>
+                        <h3 className="font-display" style={{ fontSize: "22px", fontWeight: 500, letterSpacing: "-0.01em", marginBottom: "4px" }}>
+                          {order.drop_name}
+                        </h3>
+                        <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)", letterSpacing: "0.02em" }}>
+                          {formatDate(order.created_at)}
+                        </p>
+                      </div>
+
+                      {/* Status badge */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{
+                          width: "6px", height: "6px", borderRadius: "50%",
+                          backgroundColor: order.status === "charged" ? "var(--gold)"
+                            : order.status === "cancelled" ? "#B85450"
+                            : order.status === "refunded" ? "#B85450"
+                            : "var(--ink-muted)",
+                          display: "inline-block",
+                          flexShrink: 0,
+                        }} />
+                        <span style={{
+                          fontSize: "9px", letterSpacing: "0.18em",
+                          textTransform: "uppercase", fontWeight: 500,
+                          color: order.status === "charged" ? "var(--gold)"
+                            : order.status === "cancelled" ? "#B85450"
+                            : order.status === "refunded" ? "#B85450"
+                            : "var(--ink-muted)",
+                        }}>
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <hr className="gold-rule" style={{ marginBottom: "16px" }} />
+
+                    {/* Line items */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px" }}>
+                      {(order.items as OrderItem[]).map((item, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px" }}>
+                          <span style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)" }}>
+                            {item.name} <span style={{ color: "var(--ink-muted)", opacity: 0.6 }}>× {item.qty}</span>
+                          </span>
+                          <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--ink)", flexShrink: 0 }}>
+                            ${(item.line_total_cents / 100).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Total */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>
+                        Total authorized
+                      </span>
+                      <span className="font-display" style={{ fontSize: "22px", fontWeight: 500 }}>
+                        ${(order.total_cents / 100).toLocaleString()}
+                      </span>
+                    </div>
+
+                    {/* View drop link */}
+                    <Link
+                      href={}
+                      className="nav-link"
+                      style={{ display: "inline-block", textDecoration: "none", marginTop: "16px" }}
+                    >
+                      View drop →
+                    </Link>
+
+                  </div>
+                ))}
+              </div>
+            )}
 
           </section>
 
