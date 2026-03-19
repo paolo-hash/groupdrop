@@ -191,6 +191,28 @@ export default function DropPage({
     return () => clearInterval(interval);
   }, []);
 
+  /* Realtime — animate progress bar when raised updates in Supabase */
+  useEffect(() => {
+    if (!drop) return;
+    const channel = supabase
+      .channel(`drop-${drop.id}-realtime`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "drops", filter: `id=eq.${drop.id}` },
+        (payload) => {
+          const updated = normalizeDrop(payload.new as RawDrop);
+          setDrop((prev) =>
+            prev ? { ...prev, raisedCents: updated.raisedCents } : prev
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [drop?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const cartItems = useMemo(() => {
     return skus
       .map((s) => {

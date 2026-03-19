@@ -54,6 +54,30 @@ export default function Home() {
     fetchDrops();
   }, []);
 
+  /* ===============================
+     Realtime — animate progress bar
+     when raised updates in Supabase
+  ================================= */
+  useEffect(() => {
+    const channel = supabase
+      .channel("drops-realtime")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "drops" },
+        (payload) => {
+          const updated = payload.new as Drop;
+          setDrops((prev) =>
+            prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   /*
     CHANGE: Check auth state on mount and listen for changes.
     onAuthStateChange fires when the user logs in or out,
