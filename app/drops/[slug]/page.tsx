@@ -271,7 +271,6 @@ export default function DropPage({
 
     /*
       CHANGE: Increment drops_used_this_month in Supabase after successful join.
-      Uses the Supabase RPC increment pattern to avoid race conditions.
     */
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -279,6 +278,31 @@ export default function DropPage({
         .from("profiles")
         .update({ drops_used_this_month: (profile?.drops_used_this_month ?? 0) + 1 })
         .eq("id", user.id);
+
+      /*
+        CHANGE: Write an order record to the orders table.
+        Captures a snapshot of what the user ordered, the total,
+        and links back to the user and drop for the order history.
+      */
+      const orderItems = cartItems.map((x) => ({
+        sku_id: x.sku.id,
+        name: x.sku.name,
+        qty: x.qty,
+        price_cents: x.sku.price_cents,
+        line_total_cents: x.lineTotal,
+      }));
+
+      await supabase
+        .from("orders")
+        .insert({
+          user_id: user.id,
+          drop_id: drop.id,
+          drop_slug: drop.slug,
+          drop_name: drop.name,
+          items: orderItems,
+          total_cents: cartTotal,
+          status: "pending",
+        });
     }
 
     setStatusMsg("Joined successfully.");
