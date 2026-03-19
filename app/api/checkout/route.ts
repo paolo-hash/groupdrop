@@ -54,15 +54,16 @@ export async function POST(req: NextRequest) {
 
     /*
       Create a Stripe Checkout session.
-      - mode: "subscription" sets up recurring billing
+      - mode: annual billing is a one-time payment; monthly is a recurring subscription
       - success_url: where Stripe sends the user after payment
       - cancel_url: where Stripe sends the user if they bail
       - client_reference_id: we store the Supabase userId so the
         webhook can match the payment back to the right profile row
       - customer_email: pre-fills the email on the Stripe checkout page
     */
+    const mode = billing === "annual" ? "payment" : "subscription";
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode,
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `https://groupdrop-iota.vercel.app/?welcome=true&tier=${tier}`,
       cancel_url: `https://groupdrop-iota.vercel.app/join`,
