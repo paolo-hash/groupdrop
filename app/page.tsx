@@ -474,8 +474,8 @@ export default function Home() {
                   style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', fontStyle: 'italic' }}>
                   Account
                 </Link>
-                <button onClick={() => { setMenuOpen(false); handleSignOut(); }} className="font-display"
-                  style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink-muted)', background: 'none', border: 'none', cursor: 'pointer', fontStyle: 'italic', fontFamily: 'inherit' }}>
+                <button onClick={() => { setMenuOpen(false); handleSignOut(); }}
+                  style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink-muted)', background: 'none', border: 'none', cursor: 'pointer', fontStyle: 'italic', fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
                   Sign out
                 </button>
               </>
