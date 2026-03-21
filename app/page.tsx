@@ -565,7 +565,7 @@ export default function Home() {
             <button
               onClick={() => setMenuOpen((o) => !o)}
               className="flex md:hidden"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', flexDirection: 'column', gap: '4.5px', zIndex: 60 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexDirection: 'column', gap: '4.5px', zIndex: 60 }}
               aria-label={menuOpen ? "Close menu" : "Open menu"}
             >
               <span className={`bar ${menuOpen ? 'bar-top-open' : ''}`} />
