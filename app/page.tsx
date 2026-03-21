@@ -53,6 +53,8 @@ export default function Home() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeTier, setWelcomeTier] = useState<string>("essentialist");
 
+  const [tier, setTier] = useState<string | null>(null);
+
   /* ===============================
      Fetch Drops
   ================================= */
@@ -105,6 +107,14 @@ export default function Home() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ?? null);
+      if (data.user) {
+        supabase
+          .from("profiles")
+          .select("tier")
+          .eq("id", data.user.id)
+          .single()
+          .then(({ data: profile }) => setTier(profile?.tier ?? null));
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -646,22 +656,30 @@ export default function Home() {
                       Completed drops get a gold color; active drops get muted ink.
                       The small decorative dot before the text is a luxury detail.
                     */}
-                    <div className="status-badge" style={{
-                      color: isComplete ? 'var(--gold)' : 'var(--ink-muted)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      marginBottom: '16px',
-                    }}>
-                      <span style={{
-                        width: '5px',
-                        height: '5px',
-                        borderRadius: '50%',
-                        backgroundColor: isComplete ? 'var(--gold)' : 'var(--ink-muted)',
-                        display: 'inline-block',
-                        opacity: isComplete ? 1 : 0.5,
-                      }} />
-                      {isComplete ? "Completed" : "Active Drop"}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                      <div className="status-badge" style={{
+                        color: isComplete ? 'var(--gold)' : 'var(--ink-muted)',
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                      }}>
+                        <span style={{
+                          width: '5px', height: '5px', borderRadius: '50%',
+                          backgroundColor: isComplete ? 'var(--gold)' : 'var(--ink-muted)',
+                          display: 'inline-block', opacity: isComplete ? 1 : 0.5,
+                        }} />
+                        {isComplete ? "Completed" : "Active Drop"}
+                      </div>
+
+                      {tier === "curator" && !isComplete && (
+                        <span style={{
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase',
+                          fontWeight: 500, color: 'var(--gold)',
+                          border: '1px solid var(--gold)', padding: '3px 8px', borderRadius: '2px',
+                        }}>
+                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--gold)', display: 'inline-block' }} />
+                          Early Access
+                        </span>
+                      )}
                     </div>
 
                     {/*
