@@ -54,6 +54,7 @@ export default function Home() {
   const [welcomeTier, setWelcomeTier] = useState<string>("essentialist");
 
   const [tier, setTier] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   /* ===============================
      Fetch Drops
@@ -333,6 +334,30 @@ export default function Home() {
           font-family: 'Jost', sans-serif;
         }
 
+        /* Mobile menu overlay */
+        .mobile-menu {
+          position: fixed;
+          inset: 0;
+          z-index: 40;
+          background: var(--cream);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 0;
+          animation: menuFadeIn 0.2s ease forwards;
+        }
+        @keyframes menuFadeIn {
+          from { opacity: 0; transform: translateY(-8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hamburger bars */
+        .bar { display: block; width: 22px; height: 1.5px; background: var(--ink); transition: transform 0.25s ease, opacity 0.25s ease; }
+        .bar-top-open    { transform: translateY(5px) rotate(45deg); }
+        .bar-mid-open    { opacity: 0; }
+        .bar-bot-open    { transform: translateY(-5px) rotate(-45deg); }
+
         /* CHANGE: Step number styling for How it Works — large italic serif numeral */
         .step-num {
           font-family: 'Cormorant Garamond', serif;
@@ -429,6 +454,49 @@ export default function Home() {
         );
       })()}
 
+      {/* Mobile menu overlay */}
+      {menuOpen && (
+        <div className="mobile-menu md:hidden">
+          <div style={{ width: '32px', height: '1px', backgroundColor: 'var(--gold)', marginBottom: '48px' }} />
+
+          <nav style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '36px' }}>
+            <a href="#drops" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', fontStyle: 'italic' }}>
+              Drops
+            </a>
+            <a href="#how" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', fontStyle: 'italic' }}>
+              How it works
+            </a>
+            {user ? (
+              <>
+                <Link href="/account" className="font-display" onClick={() => setMenuOpen(false)}
+                  style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', fontStyle: 'italic' }}>
+                  Account
+                </Link>
+                <button onClick={() => { setMenuOpen(false); handleSignOut(); }} className="font-display"
+                  style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink-muted)', background: 'none', border: 'none', cursor: 'pointer', fontStyle: 'italic', fontFamily: 'inherit' }}>
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="font-display" onClick={() => setMenuOpen(false)}
+                  style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', fontStyle: 'italic' }}>
+                  Sign in
+                </Link>
+                <Link href="/join" className="font-display" onClick={() => setMenuOpen(false)}
+                  style={{ fontSize: '36px', fontWeight: 500, color: 'var(--gold)', textDecoration: 'none', fontStyle: 'italic' }}>
+                  Join
+                </Link>
+              </>
+            )}
+          </nav>
+
+          <div style={{ width: '32px', height: '1px', backgroundColor: 'var(--gold)', marginTop: '48px' }} />
+        </div>
+      )}
+
       <main style={{ minHeight: '100vh', backgroundColor: 'var(--cream)', color: 'var(--ink)' }}>
 
         {/*
@@ -474,24 +542,14 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Nav links — now uppercase, tracked, with animated underline */}
+            {/* Desktop nav */}
             <nav style={{ display: 'flex', gap: '36px', alignItems: 'center' }} className="hidden md:flex">
               <a href="#drops" className="nav-link">Drops</a>
               <a href="#how" className="nav-link">How it works</a>
-              {/*
-                CHANGE: Auth-aware nav — shows "Sign out" button when logged in,
-                "Sign in" link when logged out. Join is always visible but hidden
-                when already a member to reduce clutter.
-              */}
               {user ? (
                 <>
-                  {/* CHANGE: Added Account link for logged-in users */}
                   <Link href="/account" className="nav-link" style={{ textDecoration: 'none' }}>Account</Link>
-                  <button
-                    onClick={handleSignOut}
-                    className="nav-link"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
-                  >
+                  <button onClick={handleSignOut} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                     Sign out
                   </button>
                 </>
@@ -502,6 +560,18 @@ export default function Home() {
                 </>
               )}
             </nav>
+
+            {/* Hamburger button — mobile only */}
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="flex md:hidden"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', flexDirection: 'column', gap: '4.5px', zIndex: 60 }}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+            >
+              <span className={`bar ${menuOpen ? 'bar-top-open' : ''}`} />
+              <span className={`bar ${menuOpen ? 'bar-mid-open' : ''}`} />
+              <span className={`bar ${menuOpen ? 'bar-bot-open' : ''}`} />
+            </button>
 
           </div>
         </header>
