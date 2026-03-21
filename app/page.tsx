@@ -56,8 +56,14 @@ export default function Home() {
   const [tier, setTier] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  /* Concierge modal */
+  const [showConcierge, setShowConcierge] = useState(false);
+  const [conciergeForm, setConciergeForm] = useState({ name: "", email: "", topic: "General Question", message: "" });
+  const [conciergeSent, setConciergeSent] = useState(false);
+
   /* Member counts — number of orders per drop */
   const [memberCountMap, setMemberCountMap] = useState<Record<string, number>>({});
+
 
   /* Animated raised amounts — per-drop smooth count-up on realtime updates */
   const displayRaisedRef = useRef<Record<string, number>>({});
@@ -393,6 +399,9 @@ export default function Home() {
           50%       { opacity: 0.45; }
         }
         .urgency-pulse { animation: urgencyPulse 1.8s ease-in-out infinite; }
+        .concierge-input { width: 100%; background: var(--cream); border: 1px solid var(--border); padding: 10px 14px; font-family: inherit; font-size: 13px; font-weight: 300; color: var(--ink); outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .concierge-input:focus { border-color: var(--gold); }
+        .concierge-input::placeholder { color: var(--ink-muted); }
 
         /* Mobile menu overlay */
         .mobile-menu {
@@ -436,6 +445,63 @@ export default function Home() {
         CHANGE: Background changed from bg-neutral-50 to var(--cream) via body rule.
         Text color changed from neutral-900 to var(--ink) — warmer and more refined.
       */}
+      {/* ── Concierge modal ──────────────────────────────────────── */}
+      {showConcierge && (
+        <div onClick={() => setShowConcierge(false)} style={{ position: 'fixed', inset: 0, zIndex: 100, backgroundColor: 'rgba(26,24,20,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ backgroundColor: '#FDFAF5', border: '1px solid var(--border)', borderRadius: '4px', padding: '48px 40px', maxWidth: '520px', width: '100%', position: 'relative' }}>
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <div style={{ width: '24px', height: '1px', backgroundColor: 'var(--gold)' }} />
+                <span style={{ fontSize: '9px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500 }}>Concierge</span>
+              </div>
+              <h3 className="font-display" style={{ fontSize: '28px', fontWeight: 500, fontStyle: 'italic' }}>How can we help?</h3>
+            </div>
+            {conciergeSent ? (
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                <p className="font-display" style={{ fontSize: '24px', fontWeight: 500, fontStyle: 'italic', marginBottom: '12px' }}>Message received.</p>
+                <p style={{ fontSize: '14px', fontWeight: 300, color: 'var(--ink-muted)', lineHeight: 1.7 }}>Our concierge team will be in touch within one business day.</p>
+                <button onClick={() => setShowConcierge(false)} className="btn-primary" style={{ marginTop: '32px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Close</button>
+              </div>
+            ) : (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const subject = encodeURIComponent(`[Groupdrop Concierge] ${conciergeForm.topic}`);
+                const body = encodeURIComponent(`Name: ${conciergeForm.name}\nEmail: ${conciergeForm.email}\nTopic: ${conciergeForm.topic}\n\n${conciergeForm.message}`);
+                window.location.href = `mailto:hello@groupdrop.com?subject=${subject}&body=${body}`;
+                setConciergeSent(true);
+              }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, color: 'var(--ink-muted)', display: 'block', marginBottom: '6px' }}>Full Name</label>
+                    <input required className="concierge-input" placeholder="Jane Smith" value={conciergeForm.name} onChange={(e) => setConciergeForm((f) => ({ ...f, name: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, color: 'var(--ink-muted)', display: 'block', marginBottom: '6px' }}>Email</label>
+                    <input required type="email" className="concierge-input" placeholder="jane@example.com" value={conciergeForm.email} onChange={(e) => setConciergeForm((f) => ({ ...f, email: e.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, color: 'var(--ink-muted)', display: 'block', marginBottom: '6px' }}>Topic</label>
+                  <select required className="concierge-input" value={conciergeForm.topic} onChange={(e) => setConciergeForm((f) => ({ ...f, topic: e.target.value }))}>
+                    {['General Question', 'Order Issue', 'Membership & Billing', 'Shipping & Logistics', 'Returns & Replacements', 'Other'].map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 500, color: 'var(--ink-muted)', display: 'block', marginBottom: '6px' }}>Message</label>
+                  <textarea required className="concierge-input" placeholder="Tell us what's on your mind…" rows={5} value={conciergeForm.message} onChange={(e) => setConciergeForm((f) => ({ ...f, message: e.target.value }))} style={{ resize: 'vertical' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                  <button type="button" onClick={() => setShowConcierge(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, fontFamily: 'inherit' }}>Cancel</button>
+                  <button type="submit" className="btn-primary" style={{ borderRadius: '2px', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Send message →</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Welcome modal ─────────────────────────────────────────── */}
       {showWelcome && (() => {
         const meta = TIER_META[welcomeTier] ?? TIER_META.essentialist;
@@ -611,6 +677,7 @@ export default function Home() {
               <a href="#drops" className="nav-link">Drops</a>
               <a href="#how" className="nav-link">How it works</a>
               <Link href="/about" className="nav-link" style={{ textDecoration: 'none' }}>About</Link>
+              <Link href="/faq" className="nav-link" style={{ textDecoration: 'none' }}>FAQ</Link>
               {user ? (
                 <>
                   <Link href="/account" className="nav-link" style={{ textDecoration: 'none' }}>Account</Link>
@@ -1046,17 +1113,15 @@ export default function Home() {
           */}
           <hr className="gold-rule" style={{ marginTop: '120px' }} />
 
-          <footer style={{
-            padding: '28px 0 40px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}>
+          <footer style={{ padding: '28px 0 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <span className="font-display" style={{ fontSize: '15px', fontWeight: 400, letterSpacing: '0.05em', color: 'var(--ink-muted)' }}>
               groupdrop
             </span>
+            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+              <Link href="/about" style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, textDecoration: 'none' }}>About</Link>
+              <Link href="/faq" style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, textDecoration: 'none' }}>FAQ</Link>
+              <button onClick={() => { setConciergeSent(false); setConciergeForm({ name: '', email: '', topic: 'General Question', message: '' }); setShowConcierge(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, fontFamily: 'inherit', padding: 0 }}>Concierge</button>
+            </div>
             <span style={{ fontSize: '10px', letterSpacing: '0.12em', color: 'var(--ink-muted)', fontWeight: 300 }}>
               © {new Date().getFullYear()} groupdrop. All rights reserved.
             </span>

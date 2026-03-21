@@ -125,6 +125,9 @@ export default function DropPage({
   /* Member count — number of orders placed for this drop */
   const [memberCount, setMemberCount] = useState<number | null>(null);
 
+  /* Success modal — shown after joining a drop */
+  const [successTotal, setSuccessTotal] = useState<number | null>(null);
+
   /* Animated raised amount — smoothly counts up when raisedCents changes */
   const [animatedRaisedCents, setAnimatedRaisedCents] = useState(0);
   const animRafRef = useRef<number>(0);
@@ -400,7 +403,7 @@ export default function DropPage({
         });
     }
 
-    setStatusMsg("Joined successfully.");
+    setSuccessTotal(cartTotal);
   }
 
   /* ── Loading / error states ───────────────────────────────── */
@@ -444,6 +447,83 @@ export default function DropPage({
         fonts are now loaded in layout.tsx.
       */}
       <style dangerouslySetInnerHTML={{ __html: SHARED_STYLES }} />
+
+      {/* ── Success modal ──────────────────────────────────────── */}
+      {successTotal !== null && (
+        <div
+          onClick={() => setSuccessTotal(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 100,
+            backgroundColor: "rgba(26,24,20,0.55)",
+            backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "24px",
+          }}
+        >
+          <div
+            className="grain"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "#FDFAF5",
+              border: "1px solid var(--gold)",
+              borderRadius: "4px",
+              padding: "52px 48px",
+              maxWidth: "480px",
+              width: "100%",
+              textAlign: "center",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {/* Overline */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", marginBottom: "28px" }}>
+              <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+              <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                You&apos;re in
+              </span>
+              <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+            </div>
+
+            {/* Headline */}
+            <h2 className="font-display" style={{
+              fontSize: "clamp(36px, 6vw, 56px)",
+              fontWeight: 500, lineHeight: 1.05,
+              letterSpacing: "-0.01em", marginBottom: "8px",
+            }}>
+              <em style={{ fontStyle: "italic" }}>{drop.name}</em>
+            </h2>
+
+            {/* Authorized amount */}
+            <p className="font-display" style={{
+              fontSize: "28px", fontWeight: 300,
+              color: "var(--gold)", marginBottom: "24px",
+            }}>
+              {moneyFromCents(successTotal)} authorized
+            </p>
+
+            {/* Body */}
+            <p style={{
+              fontSize: "14px", fontWeight: 300, lineHeight: 1.8,
+              color: "var(--ink-muted)", marginBottom: "40px", maxWidth: "340px", margin: "0 auto 40px",
+            }}>
+              Your allocation is reserved. We&apos;ll only charge your card if the drop hits its target — and you&apos;ll be the first to know.
+            </p>
+
+            {/* CTAs */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
+              <Link href="/" className="btn-primary" style={{ borderRadius: "2px", textDecoration: "none", display: "inline-block" }}>
+                Browse other drops →
+              </Link>
+              <button
+                onClick={() => setSuccessTotal(null)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, fontFamily: "inherit" }}
+              >
+                Stay on this page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main style={{ minHeight: "100vh", backgroundColor: "var(--cream)", color: "var(--ink)" }}>
 
@@ -509,6 +589,17 @@ export default function DropPage({
 
           {/* ── Drop Hero ─────────────────────────────────────── */}
           <section style={{ paddingTop: "100px" }}>
+
+            <Link href="/" style={{
+              display: "inline-flex", alignItems: "center", gap: "6px",
+              fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase",
+              fontWeight: 500, color: "var(--ink-muted)", textDecoration: "none",
+              marginBottom: "32px",
+            }}
+              className="nav-link"
+            >
+              ← All drops
+            </Link>
 
             <div className="animate-fade-up" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px", flexWrap: "wrap" }}>
               <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", flexShrink: 0 }} />
