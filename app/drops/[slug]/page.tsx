@@ -101,6 +101,7 @@ const TIER_LIMITS: Record<string, number> = {
 type Profile = {
   tier: string | null;
   drops_used_this_month: number;
+  full_name: string | null;
 };
 
 export default function DropPage({
@@ -188,7 +189,7 @@ export default function DropPage({
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("tier, drops_used_this_month")
+        .select("tier, drops_used_this_month, full_name")
         .eq("id", user.id)
         .single();
       if (data) setProfile(data as Profile);
@@ -388,6 +389,8 @@ export default function DropPage({
         .from("orders")
         .insert({
           user_id: user.id,
+          user_email: user.email,
+          user_name: profile?.full_name ?? null,
           drop_id: drop.id,
           drop_slug: drop.slug,
           drop_name: drop.name,
@@ -555,14 +558,31 @@ export default function DropPage({
             <p className="animate-fade-up delay-2" style={{
               fontSize: "15px", fontWeight: 300, lineHeight: 1.75,
               color: "var(--ink-muted)", maxWidth: "480px",
-              letterSpacing: "0.01em", marginBottom: "52px",
+              letterSpacing: "0.01em", marginBottom: "28px",
             }}>
               Build your cart. Your total is what you&apos;re authorizing — and what pushes
               this drop toward the collective threshold.
             </p>
 
+            {/* Member count — hero social proof */}
+            {memberCount !== null && (
+              <div className="animate-fade-up delay-3" style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "40px" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--gold)", flexShrink: 0 }}>
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                <span style={{ fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 500, color: memberCount === 0 ? "var(--ink-muted)" : "var(--ink)" }}>
+                  {memberCount === 0
+                    ? "Be the first to join this drop"
+                    : <>{memberCount} <span style={{ color: "var(--ink-muted)", fontWeight: 300, textTransform: "none", letterSpacing: 0 }}>member{memberCount === 1 ? "" : "s"} joined this drop</span></>}
+                </span>
+              </div>
+            )}
+
             {/* Progress card */}
-            <div className="grain animate-fade-up delay-3" style={{
+            <div className="grain animate-fade-up delay-4" style={{
               backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
               borderRadius: "4px", padding: "32px", position: "relative",
               overflow: "hidden", marginBottom: "72px",
@@ -632,22 +652,6 @@ export default function DropPage({
                 );
               })()}
 
-              {/* Member count */}
-              {memberCount !== null && (
-                <div style={{ marginTop: "20px", borderTop: "1px solid var(--parchment)", paddingTop: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--ink-muted)", flexShrink: 0 }}>
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
-                  <span style={{ fontSize: "12px", color: "var(--ink-muted)", fontWeight: 300, letterSpacing: "0.02em" }}>
-                    {memberCount === 0
-                      ? "Be the first to join this drop"
-                      : `${memberCount} member${memberCount === 1 ? "" : "s"} joined`}
-                  </span>
-                </div>
-              )}
 
             </div>
 
@@ -934,6 +938,7 @@ const SHARED_STYLES = [
   ".delay-1 { animation-delay: 0.1s; }",
   ".delay-2 { animation-delay: 0.25s; }",
   ".delay-3 { animation-delay: 0.4s; }",
+  ".delay-4 { animation-delay: 0.55s; }",
   ".gold-rule { border: none; border-top: 1px solid var(--gold); opacity: 0.35; margin: 0; }",
   ".status-badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; font-family: 'Jost', sans-serif; }",
   "@keyframes urgencyPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }",
