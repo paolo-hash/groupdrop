@@ -503,6 +503,10 @@ export default function Home() {
               style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', fontStyle: 'italic' }}>
               How it works
             </a>
+            <Link href="/about" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: '36px', fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', fontStyle: 'italic' }}>
+              About
+            </Link>
             {user ? (
               <>
                 <Link href="/account" className="font-display" onClick={() => setMenuOpen(false)}
@@ -581,6 +585,7 @@ export default function Home() {
             <nav style={{ display: 'flex', gap: '36px', alignItems: 'center' }} className="hidden md:flex">
               <a href="#drops" className="nav-link">Drops</a>
               <a href="#how" className="nav-link">How it works</a>
+              <Link href="/about" className="nav-link" style={{ textDecoration: 'none' }}>About</Link>
               {user ? (
                 <>
                   <Link href="/account" className="nav-link" style={{ textDecoration: 'none' }}>Account</Link>
