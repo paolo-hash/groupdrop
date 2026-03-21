@@ -90,11 +90,11 @@ export async function middleware(req: NextRequest) {
   */
   const { data: profile } = await supabase
     .from("profiles")
-    .select("tier, stripe_subscription_id")
+    .select("tier, stripe_customer_id, stripe_subscription_id")
     .eq("id", user.id)
     .single();
 
-  if (!profile?.tier || !profile?.stripe_subscription_id) {
+  if (!profile?.tier || (!profile?.stripe_customer_id && !profile?.stripe_subscription_id)) {
     /*
       Logged in but no active subscription — redirect to join page.
       This covers users who created an account but didn't complete payment.
