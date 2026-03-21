@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { use } from "react";
 import { supabase } from "../../lib/supabaseClient";
@@ -121,6 +121,11 @@ export default function DropPage({
   /* CHANGE: tick state for live countdown */
   const [tick, setTick] = useState(0);
 
+  /* Animated raised amount — smoothly counts up when raisedCents changes */
+  const [animatedRaisedCents, setAnimatedRaisedCents] = useState(0);
+  const animRafRef = useRef<number>(0);
+  const prevRaisedRef = useRef(0);
+
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
@@ -212,6 +217,28 @@ export default function DropPage({
       supabase.removeChannel(channel);
     };
   }, [drop?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* Animate the raised cents number when it changes (initial load + realtime updates) */
+  useEffect(() => {
+    if (!drop) return;
+    const from = prevRaisedRef.current;
+    const to = drop.raisedCents;
+    cancelAnimationFrame(animRafRef.current);
+    const duration = 1000;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedRaisedCents(Math.round(from + (to - from) * eased));
+      if (progress < 1) {
+        animRafRef.current = requestAnimationFrame(animate);
+      } else {
+        prevRaisedRef.current = to;
+      }
+    };
+    animRafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animRafRef.current);
+  }, [drop?.raisedCents]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cartItems = useMemo(() => {
     return skus
@@ -528,7 +555,7 @@ export default function DropPage({
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "20px" }}>
                 <span className="font-display" style={{ fontSize: "28px", fontWeight: 500 }}>
-                  {moneyFromCents(drop.raisedCents)}
+                  {moneyFromCents(animatedRaisedCents)}
                 </span>
                 <span style={{ fontSize: "16px", color: "var(--ink-muted)", fontWeight: 300 }}>
                   {moneyFromCents(drop.targetCents)}

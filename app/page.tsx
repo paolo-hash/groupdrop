@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "./lib/supabaseClient";
 
@@ -56,6 +56,11 @@ export default function Home() {
   const [tier, setTier] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  /* Animated raised amounts — per-drop smooth count-up on realtime updates */
+  const displayRaisedRef = useRef<Record<string, number>>({});
+  const [displayRaisedMap, setDisplayRaisedMap] = useState<Record<string, number>>({});
+  const rafMapRef = useRef<Record<string, number>>({});
+
   /* ===============================
      Fetch Drops
   ================================= */
@@ -68,6 +73,10 @@ export default function Home() {
 
       if (!error && data) {
         setDrops(data);
+        const initial: Record<string, number> = {};
+        data.forEach((d: Drop) => { initial[d.id] = d.raised ?? 0; });
+        displayRaisedRef.current = initial;
+        setDisplayRaisedMap(initial);
       }
 
       setLoading(false);
@@ -81,6 +90,24 @@ export default function Home() {
      when raised updates in Supabase
   ================================= */
   useEffect(() => {
+    const animateRaised = (id: string, to: number) => {
+      if (rafMapRef.current[id]) cancelAnimationFrame(rafMapRef.current[id]);
+      const from = displayRaisedRef.current[id] ?? 0;
+      const duration = 1000;
+      const startTime = performance.now();
+      const tick = (now: number) => {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(from + (to - from) * eased);
+        displayRaisedRef.current[id] = current;
+        setDisplayRaisedMap((prev) => ({ ...prev, [id]: current }));
+        if (progress < 1) {
+          rafMapRef.current[id] = requestAnimationFrame(tick);
+        }
+      };
+      rafMapRef.current[id] = requestAnimationFrame(tick);
+    };
+
     const channel = supabase
       .channel("drops-realtime")
       .on(
@@ -91,6 +118,7 @@ export default function Home() {
           setDrops((prev) =>
             prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d))
           );
+          animateRaised(updated.id, updated.raised ?? 0);
         }
       )
       .subscribe();
@@ -696,6 +724,7 @@ export default function Home() {
               {!loading && drops.map((drop) => {
 
                 const raised = drop.raised ?? 0;
+                const displayRaised = displayRaisedMap[drop.id] ?? raised;
                 const percent = getPercent(raised, drop.target);
                 const remaining = getRemaining(raised, drop.target);
                 const isComplete = raised >= drop.target;
@@ -788,7 +817,7 @@ export default function Home() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
                       <span className="font-display" style={{ fontSize: '22px', fontWeight: 500 }}>
-                        ${raised.toLocaleString()}
+                        ${displayRaised.toLocaleString()}
                       </span>
                       <span style={{ fontSize: '14px', color: 'var(--ink-muted)', fontWeight: 300 }}>
                         ${drop.target.toLocaleString()}
