@@ -865,6 +865,28 @@ export default function DropPage({
                   authorize your card now and only charge if the drop completes.
                 </p>
               </div>
+              {/* Tier upgrade nudge — shown to essentialist and enthusiast members */}
+              {(profile?.tier === "essentialist" || profile?.tier === "enthusiast") && (
+                <div style={{
+                  marginTop: "16px",
+                  borderLeft: "2px solid var(--gold)",
+                  backgroundColor: "var(--parchment)",
+                  padding: "16px 16px 16px 18px",
+                  borderRadius: "0 2px 2px 0",
+                }}>
+                  <p style={{ fontSize: "11px", letterSpacing: "0.01em", fontWeight: 400, lineHeight: 1.7, color: "var(--ink)", marginBottom: "10px" }}>
+                    {profile.tier === "essentialist"
+                      ? "Curator members get early access and unlimited drops every month."
+                      : "Curator members get early access to every drop and free shipping on all orders."}
+                  </p>
+                  <a href="/join" style={{
+                    fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase",
+                    fontWeight: 500, color: "var(--gold)", textDecoration: "none",
+                  }}>
+                    Upgrade to Curator →
+                  </a>
+                </div>
+              )}
             </aside>
 
           </div>
