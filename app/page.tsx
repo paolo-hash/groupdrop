@@ -56,6 +56,9 @@ export default function Home() {
   const [tier, setTier] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  /* Member counts — number of orders per drop */
+  const [memberCountMap, setMemberCountMap] = useState<Record<string, number>>({});
+
   /* Animated raised amounts — per-drop smooth count-up on realtime updates */
   const displayRaisedRef = useRef<Record<string, number>>({});
   const [displayRaisedMap, setDisplayRaisedMap] = useState<Record<string, number>>({});
@@ -77,6 +80,18 @@ export default function Home() {
         data.forEach((d: Drop) => { initial[d.id] = d.raised ?? 0; });
         displayRaisedRef.current = initial;
         setDisplayRaisedMap(initial);
+
+        /* Fetch member counts for all drops in one query */
+        const { data: orderRows } = await supabase
+          .from("orders")
+          .select("drop_id");
+        if (orderRows) {
+          const counts: Record<string, number> = {};
+          orderRows.forEach((o: { drop_id: string }) => {
+            counts[o.drop_id] = (counts[o.drop_id] ?? 0) + 1;
+          });
+          setMemberCountMap(counts);
+        }
       }
 
       setLoading(false);
@@ -119,6 +134,17 @@ export default function Home() {
             prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d))
           );
           animateRaised(updated.id, updated.raised ?? 0);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          const newOrder = payload.new as { drop_id: string };
+          setMemberCountMap((prev) => ({
+            ...prev,
+            [newOrder.drop_id]: (prev[newOrder.drop_id] ?? 0) + 1,
+          }));
         }
       )
       .subscribe();
@@ -908,6 +934,23 @@ export default function Home() {
                       <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: '20px' }}>
                         Drop closed
                       </p>
+                    )}
+
+                    {/* Member count */}
+                    {memberCountMap[drop.id] !== undefined && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--ink-muted)', flexShrink: 0 }}>
+                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                          <circle cx="9" cy="7" r="4" />
+                          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <span style={{ fontSize: '11px', color: 'var(--ink-muted)', fontWeight: 300, letterSpacing: '0.02em' }}>
+                          {memberCountMap[drop.id] === 0
+                            ? 'Be the first to join'
+                            : `${memberCountMap[drop.id]} member${memberCountMap[drop.id] === 1 ? '' : 's'} joined`}
+                        </span>
+                      </div>
                     )}
 
                     <Link
