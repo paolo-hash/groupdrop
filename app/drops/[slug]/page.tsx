@@ -560,10 +560,11 @@ export default function DropPage({
                     </p>
                   </div>
                 );
+                const isUrgent = cd.days === 0;
                 return (
                   <div style={{ marginTop: "20px", borderTop: "1px solid var(--parchment)", paddingTop: "16px" }}>
-                    <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "12px" }}>
-                      Closes in
+                    <p className={isUrgent ? "urgency-pulse" : ""} style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: isUrgent ? "var(--gold)" : "var(--ink-muted)", fontWeight: 500, marginBottom: "12px" }}>
+                      {isUrgent ? "Closing soon" : "Closes in"}
                     </p>
                     <div style={{ display: "flex", gap: "16px" }}>
                       {[
@@ -573,7 +574,7 @@ export default function DropPage({
                         { value: cd.seconds, label: "Sec" },
                       ].map(({ value, label }) => (
                         <div key={label} style={{ textAlign: "center", minWidth: "44px" }}>
-                          <div className="font-display" style={{ fontSize: "32px", fontWeight: 500, lineHeight: 1, color: value === 0 ? "var(--ink-muted)" : "var(--ink)" }}>
+                          <div className="font-display" style={{ fontSize: "32px", fontWeight: 500, lineHeight: 1, color: isUrgent ? "var(--gold)" : value === 0 ? "var(--ink-muted)" : "var(--ink)" }}>
                             {String(value).padStart(2, "0")}
                           </div>
                           <div style={{ fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginTop: "4px" }}>
@@ -873,4 +874,6 @@ const SHARED_STYLES = [
   ".delay-3 { animation-delay: 0.4s; }",
   ".gold-rule { border: none; border-top: 1px solid var(--gold); opacity: 0.35; margin: 0; }",
   ".status-badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; font-family: 'Jost', sans-serif; }",
+  "@keyframes urgencyPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }",
+  ".urgency-pulse { animation: urgencyPulse 1.8s ease-in-out infinite; }",
 ].join("\n");

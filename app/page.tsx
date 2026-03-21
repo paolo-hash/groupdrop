@@ -334,6 +334,13 @@ export default function Home() {
           font-family: 'Jost', sans-serif;
         }
 
+        /* Urgency pulse — animates the "Closing soon" label */
+        @keyframes urgencyPulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.45; }
+        }
+        .urgency-pulse { animation: urgencyPulse 1.8s ease-in-out infinite; }
+
         /* Mobile menu overlay */
         .mobile-menu {
           position: fixed;
@@ -834,30 +841,33 @@ export default function Home() {
                       - Full width so it anchors the card bottom
                     */}
                     {/* CHANGE: Countdown timer — shows days/hours/mins/secs until drop closes */}
-                    {!isComplete && countdown && (
-                      <div style={{ marginBottom: '20px' }}>
-                        <p style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: '10px' }}>
-                          Closes in
-                        </p>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          {[
-                            { value: countdown.days, label: 'Days' },
-                            { value: countdown.hours, label: 'Hrs' },
-                            { value: countdown.minutes, label: 'Min' },
-                            { value: countdown.seconds, label: 'Sec' },
-                          ].map(({ value, label }) => (
-                            <div key={label} style={{ textAlign: 'center', minWidth: '40px' }}>
-                              <div className="font-display" style={{ fontSize: '28px', fontWeight: 500, lineHeight: 1, color: value === 0 ? 'var(--ink-muted)' : 'var(--ink)' }}>
-                                {String(value).padStart(2, '0')}
+                    {!isComplete && countdown && (() => {
+                      const isUrgent = countdown.days === 0;
+                      return (
+                        <div style={{ marginBottom: '20px' }}>
+                          <p className={isUrgent ? 'urgency-pulse' : ''} style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: isUrgent ? 'var(--gold)' : 'var(--ink-muted)', fontWeight: 500, marginBottom: '10px' }}>
+                            {isUrgent ? 'Closing soon' : 'Closes in'}
+                          </p>
+                          <div style={{ display: 'flex', gap: '12px' }}>
+                            {[
+                              { value: countdown.days, label: 'Days' },
+                              { value: countdown.hours, label: 'Hrs' },
+                              { value: countdown.minutes, label: 'Min' },
+                              { value: countdown.seconds, label: 'Sec' },
+                            ].map(({ value, label }) => (
+                              <div key={label} style={{ textAlign: 'center', minWidth: '40px' }}>
+                                <div className="font-display" style={{ fontSize: '28px', fontWeight: 500, lineHeight: 1, color: isUrgent ? 'var(--gold)' : value === 0 ? 'var(--ink-muted)' : 'var(--ink)' }}>
+                                  {String(value).padStart(2, '0')}
+                                </div>
+                                <div style={{ fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginTop: '4px' }}>
+                                  {label}
+                                </div>
                               </div>
-                              <div style={{ fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginTop: '4px' }}>
-                                {label}
-                              </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Drop closed label if closes_at has passed */}
                     {!isComplete && !countdown && (
