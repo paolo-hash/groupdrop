@@ -505,7 +505,7 @@ export default function DropPage({
           </div>
         </header>
 
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 28px" }}>
+        <div className="page-bottom-pad" style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 28px" }}>
 
           {/* ── Drop Hero ─────────────────────────────────────── */}
           <section style={{ paddingTop: "100px" }}>
@@ -874,13 +874,13 @@ export default function DropPage({
                   padding: "16px 16px 16px 18px",
                   borderRadius: "0 2px 2px 0",
                 }}>
-                  <p style={{ fontSize: "11px", letterSpacing: "0.01em", fontWeight: 400, lineHeight: 1.7, color: "var(--ink)", marginBottom: "10px" }}>
+                  <p style={{ fontSize: "13px", letterSpacing: "0.01em", fontWeight: 400, lineHeight: 1.7, color: "var(--ink)", marginBottom: "10px" }}>
                     {profile.tier === "essentialist"
                       ? "Curator members get early access and unlimited drops every month."
                       : "Curator members get early access to every drop and free shipping on all orders."}
                   </p>
                   <a href="/join" style={{
-                    fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase",
+                    fontSize: "11px", letterSpacing: "0.14em", textTransform: "uppercase",
                     fontWeight: 500, color: "var(--gold)", textDecoration: "none",
                   }}>
                     Upgrade to Curator →
@@ -906,6 +906,45 @@ export default function DropPage({
           </footer>
 
         </div>
+      {/* ── Mobile sticky cart bar ─────────────────────────── */}
+      <div className="flex md:hidden" style={{
+        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40,
+        borderTop: "1px solid var(--border)",
+        backgroundColor: "rgba(247,244,238,0.95)",
+        backdropFilter: "blur(12px)",
+        padding: "16px 24px",
+        alignItems: "center", justifyContent: "space-between", gap: "16px",
+      }}>
+        <div>
+          <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "3px" }}>
+            {cartItems.length === 0 ? "Your cart" : `${cartItems.reduce((s, x) => s + x.qty, 0)} item${cartItems.reduce((s, x) => s + x.qty, 0) === 1 ? "" : "s"}`}
+          </p>
+          <span className="font-display" style={{ fontSize: "24px", fontWeight: 500, lineHeight: 1 }}>
+            {moneyFromCents(cartTotal)}
+          </span>
+        </div>
+        <button
+          onClick={handleJoin}
+          disabled={reachedTarget}
+          className={reachedTarget ? "" : "btn-primary"}
+          style={{
+            borderRadius: "2px", border: "none", cursor: reachedTarget ? "not-allowed" : "pointer",
+            fontFamily: "inherit", flexShrink: 0,
+            ...(reachedTarget ? {
+              backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
+              fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" as const,
+              fontWeight: 500, padding: "12px 20px",
+            } : {}),
+          }}
+        >
+          {reachedTarget
+            ? "Target reached"
+            : cartTotal <= 0
+            ? "Add items →"
+            : `Authorize ${moneyFromCents(cartTotal)} →`}
+        </button>
+      </div>
+
       </main>
     </>
   );
@@ -965,4 +1004,5 @@ const SHARED_STYLES = [
   ".status-badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; font-family: 'Jost', sans-serif; }",
   "@keyframes urgencyPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }",
   ".urgency-pulse { animation: urgencyPulse 1.8s ease-in-out infinite; }",
+  "@media (max-width: 767px) { .page-bottom-pad { padding-bottom: 96px; } }",
 ].join("\n");
