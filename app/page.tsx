@@ -85,13 +85,12 @@ export default function Home() {
         const { data: orderRows } = await supabase
           .from("orders")
           .select("drop_id");
-        if (orderRows) {
-          const counts: Record<string, number> = {};
-          orderRows.forEach((o: { drop_id: string }) => {
-            counts[o.drop_id] = (counts[o.drop_id] ?? 0) + 1;
-          });
-          setMemberCountMap(counts);
-        }
+        const counts: Record<string, number> = {};
+        data.forEach((d: Drop) => { counts[d.id] = 0; }); // init all to 0
+        orderRows?.forEach((o: { drop_id: string }) => {
+          counts[o.drop_id] = (counts[o.drop_id] ?? 0) + 1;
+        });
+        setMemberCountMap(counts);
       }
 
       setLoading(false);
@@ -785,6 +784,8 @@ export default function Home() {
                       padding: '32px',
                       position: 'relative',
                       overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
                     }}
                   >
 
@@ -956,7 +957,7 @@ export default function Home() {
                     <Link
                       href={`/drops/${drop.slug}`}
                       className="btn-primary"
-                      style={{ display: 'block', textAlign: 'center', borderRadius: '2px' }}
+                      style={{ display: 'block', textAlign: 'center', borderRadius: '2px', marginTop: 'auto' }}
                     >
                       View allocation →
                     </Link>
