@@ -121,6 +121,9 @@ export default function DropPage({
   /* CHANGE: tick state for live countdown */
   const [tick, setTick] = useState(0);
 
+  /* Member count — number of orders placed for this drop */
+  const [memberCount, setMemberCount] = useState<number | null>(null);
+
   /* Animated raised amount — smoothly counts up when raisedCents changes */
   const [animatedRaisedCents, setAnimatedRaisedCents] = useState(0);
   const animRafRef = useRef<number>(0);
@@ -164,6 +167,14 @@ export default function DropPage({
       }
 
       setSkus((skuData ?? []) as Sku[]);
+
+      /* Fetch member count — number of orders placed for this drop */
+      const { count } = await supabase
+        .from("orders")
+        .select("*", { count: "exact", head: true })
+        .eq("drop_id", normalizedDrop.id);
+      setMemberCount(count ?? 0);
+
       setLoading(false);
     }
 
@@ -196,7 +207,7 @@ export default function DropPage({
     return () => clearInterval(interval);
   }, []);
 
-  /* Realtime — animate progress bar when raised updates in Supabase */
+  /* Realtime — update raised amount and member count live */
   useEffect(() => {
     if (!drop) return;
     const channel = supabase
@@ -209,6 +220,13 @@ export default function DropPage({
           setDrop((prev) =>
             prev ? { ...prev, raisedCents: updated.raisedCents } : prev
           );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders", filter: `drop_id=eq.${drop.id}` },
+        () => {
+          setMemberCount((prev) => (prev ?? 0) + 1);
         }
       )
       .subscribe();
@@ -613,6 +631,23 @@ export default function DropPage({
                   </div>
                 );
               })()}
+
+              {/* Member count */}
+              {memberCount !== null && (
+                <div style={{ marginTop: "20px", borderTop: "1px solid var(--parchment)", paddingTop: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--ink-muted)", flexShrink: 0 }}>
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  <span style={{ fontSize: "12px", color: "var(--ink-muted)", fontWeight: 300, letterSpacing: "0.02em" }}>
+                    {memberCount === 0
+                      ? "Be the first to join this drop"
+                      : `${memberCount} member${memberCount === 1 ? "" : "s"} joined`}
+                  </span>
+                </div>
+              )}
 
             </div>
 
