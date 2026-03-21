@@ -462,8 +462,8 @@ export default function DropPage({
           {/* ── Drop Hero ─────────────────────────────────────── */}
           <section style={{ paddingTop: "100px" }}>
 
-            <div className="animate-fade-up" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px" }}>
-              <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)" }} />
+            <div className="animate-fade-up" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px", flexWrap: "wrap" }}>
+              <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", flexShrink: 0 }} />
               <span className="status-badge" style={{
                 color: reachedTarget ? "var(--gold)" : "var(--ink-muted)",
                 display: "flex", alignItems: "center", gap: "6px",
@@ -475,6 +475,29 @@ export default function DropPage({
                 }} />
                 {reachedTarget ? "Completed" : "Active Drop"}
               </span>
+
+              {/* Early access badge — Curator tier only */}
+              {profile?.tier === "curator" && !reachedTarget && (
+                <span style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontSize: "9px",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  fontWeight: 500,
+                  color: "var(--gold)",
+                  border: "1px solid var(--gold)",
+                  padding: "3px 8px",
+                  borderRadius: "2px",
+                }}>
+                  <span style={{
+                    width: "5px", height: "5px", borderRadius: "50%",
+                    backgroundColor: "var(--gold)", display: "inline-block",
+                  }} />
+                  Early Access
+                </span>
+              )}
             </div>
 
             <h1 className="font-display animate-fade-up delay-1" style={{

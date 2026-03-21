@@ -12,7 +12,7 @@ type Drop = {
   slug: string;
   title: string;
   target: number;
-  raised: number;
+  raised: number | null;
   closes_at: string;
 };
 
@@ -608,9 +608,10 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
               {!loading && drops.map((drop) => {
 
-                const percent = getPercent(drop.raised, drop.target);
-                const remaining = getRemaining(drop.raised, drop.target);
-                const isComplete = drop.raised >= drop.target;
+                const raised = drop.raised ?? 0;
+                const percent = getPercent(raised, drop.target);
+                const remaining = getRemaining(raised, drop.target);
+                const isComplete = raised >= drop.target;
                 /* CHANGE: Calculate countdown from closes_at — tick dependency keeps it live */
                 const countdown = drop.closes_at ? getCountdown(drop.closes_at) : null;
                 void tick; // consumed to trigger re-render each second
@@ -692,7 +693,7 @@ export default function Home() {
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '16px' }}>
                       <span className="font-display" style={{ fontSize: '22px', fontWeight: 500 }}>
-                        ${drop.raised.toLocaleString()}
+                        ${raised.toLocaleString()}
                       </span>
                       <span style={{ fontSize: '14px', color: 'var(--ink-muted)', fontWeight: 300 }}>
                         ${drop.target.toLocaleString()}
