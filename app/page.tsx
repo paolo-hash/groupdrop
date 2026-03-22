@@ -20,18 +20,21 @@ type Drop = {
 /* ===============================
    Page
 ================================ */
-const TIER_META: Record<string, { name: string; note: string }> = {
+const TIER_META: Record<string, { name: string; benefit: string; detail: string }> = {
   essentialist: {
     name: "The Essentialist",
-    note: "You have access to 2 drops per month at insider pricing.",
+    benefit: "2 drops per month at insider pricing.",
+    detail: "Your founding member rate is locked in for life — regardless of future price changes.",
   },
   enthusiast: {
     name: "The Enthusiast",
-    note: "You have access to 5 drops per month, plus free shipping on orders over $150.",
+    benefit: "5 drops per month, free shipping over $150.",
+    detail: "Your founding member rate is locked in for life — regardless of future price changes.",
   },
   curator: {
     name: "The Curator",
-    note: "You have unlimited drops, 24-hour early access, and free shipping on every order.",
+    benefit: "Unlimited drops, 24-hour early access, free shipping on every order.",
+    detail: "Your founding member rate is locked in for life — regardless of future price changes.",
   },
 };
 
@@ -53,6 +56,7 @@ export default function Home() {
   /* Welcome modal state */
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomeTier, setWelcomeTier] = useState<string>("essentialist");
+  const [welcomeStep, setWelcomeStep] = useState(1);
 
   const [tier, setTier] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -166,21 +170,25 @@ export default function Home() {
     keeping the nav in sync without a page reload.
   */
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ?? null);
-      if (data.user) {
-        supabase
-          .from("profiles")
-          .select("tier")
-          .eq("id", data.user.id)
-          .single()
-          .then(({ data: profile }) => setTier(profile?.tier ?? null));
-      }
+    async function fetchTier(userId: string) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("tier")
+        .eq("id", userId)
+        .single();
+      setTier(profile?.tier ?? null);
+    }
+
+    /* getSession reads from localStorage instantly — no network round-trip */
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchTier(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
+        if (session?.user) fetchTier(session.user.id);
       }
     );
 
@@ -200,6 +208,7 @@ export default function Home() {
 
     const tier = params.get("tier") ?? "essentialist";
     setWelcomeTier(tier in TIER_META ? tier : "essentialist");
+    setWelcomeStep(1);
     setShowWelcome(true);
   }, []);
 
@@ -506,18 +515,91 @@ export default function Home() {
       {/* ── Welcome modal ─────────────────────────────────────────── */}
       {showWelcome && (() => {
         const meta = TIER_META[welcomeTier] ?? TIER_META.essentialist;
+
+        const steps = [
+          /* Step 1 — Membership confirmed */
+          <div key={1} style={{ textAlign: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", marginBottom: "28px" }}>
+              <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+              <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                Membership active
+              </span>
+              <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+            </div>
+            <h2 className="font-display" style={{ fontSize: "clamp(36px, 6vw, 52px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.01em", marginBottom: "12px" }}>
+              <em style={{ fontStyle: "italic" }}>Welcome,{"\u00A0"}{meta.name}.</em>
+            </h2>
+            <p style={{ fontSize: "15px", fontWeight: 400, color: "var(--gold)", letterSpacing: "0.01em", marginBottom: "16px" }}>
+              {meta.benefit}
+            </p>
+            <p style={{ fontSize: "13px", fontWeight: 300, lineHeight: 1.75, color: "var(--ink-muted)", letterSpacing: "0.01em", marginBottom: "40px" }}>
+              {meta.detail}
+            </p>
+            <button onClick={() => setWelcomeStep(2)} className="btn-primary" style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              How it works →
+            </button>
+          </div>,
+
+          /* Step 2 — How drops work */
+          <div key={2} style={{ textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "28px" }}>
+              <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+              <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                How it works
+              </span>
+            </div>
+            <h2 className="font-display" style={{ fontSize: "clamp(28px, 5vw, 40px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.01em", marginBottom: "32px" }}>
+              <em style={{ fontStyle: "italic" }}>Three steps.</em>
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px", marginBottom: "40px" }}>
+              {[
+                { n: "1", title: "Browse open drops", body: "Each drop is a curated selection from a single brand — available exclusively to members." },
+                { n: "2", title: "Add items and authorize", body: "Select what you want and authorize a total. Your card is not charged yet — just reserved." },
+                { n: "3", title: "Drop funds, we fulfill", body: "If the drop hits its collective target, your card is charged and we ship. If it doesn't fund, you owe nothing." },
+              ].map(({ n, title, body }) => (
+                <div key={n} style={{ display: "flex", gap: "20px", alignItems: "flex-start" }}>
+                  <span className="font-display" style={{ fontSize: "32px", fontWeight: 500, color: "var(--gold)", lineHeight: 1, flexShrink: 0, width: "24px" }}>{n}</span>
+                  <div>
+                    <p style={{ fontSize: "13px", fontWeight: 500, letterSpacing: "0.02em", marginBottom: "4px" }}>{title}</p>
+                    <p style={{ fontSize: "13px", fontWeight: 300, lineHeight: 1.7, color: "var(--ink-muted)" }}>{body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setWelcomeStep(3)} className="btn-primary" style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              See open drops →
+            </button>
+          </div>,
+
+          /* Step 3 — First drop nudge */
+          <div key={3} style={{ textAlign: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", marginBottom: "28px" }}>
+              <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+              <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                You&apos;re ready
+              </span>
+              <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+            </div>
+            <h2 className="font-display" style={{ fontSize: "clamp(32px, 5vw, 48px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.01em", marginBottom: "16px" }}>
+              <em style={{ fontStyle: "italic" }}>Make your first allocation.</em>
+            </h2>
+            <p style={{ fontSize: "14px", fontWeight: 300, lineHeight: 1.75, color: "var(--ink-muted)", letterSpacing: "0.01em", marginBottom: "40px", maxWidth: "340px", margin: "0 auto 40px" }}>
+              Browse the drops below, select your items, and authorize your total. You won&apos;t be charged unless the drop fully funds.
+            </p>
+            <button onClick={dismissWelcome} className="btn-primary" style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              Browse open drops →
+            </button>
+          </div>,
+        ];
+
         return (
           <div
             onClick={dismissWelcome}
             style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 100,
+              position: "fixed", inset: 0, zIndex: 100,
               backgroundColor: "rgba(26,24,20,0.55)",
               backdropFilter: "blur(6px)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              display: "flex", alignItems: "center", justifyContent: "center",
               padding: "24px",
             }}
           >
@@ -525,57 +607,25 @@ export default function Home() {
               className="grain"
               onClick={(e) => e.stopPropagation()}
               style={{
-                backgroundColor: "#FDFAF5",
-                border: "1px solid var(--gold)",
-                borderRadius: "4px",
-                padding: "52px 48px",
-                position: "relative",
-                overflow: "hidden",
-                maxWidth: "480px",
-                width: "100%",
-                textAlign: "center",
+                backgroundColor: "#FDFAF5", border: "1px solid var(--gold)",
+                borderRadius: "4px", padding: "52px 48px",
+                position: "relative", overflow: "hidden",
+                maxWidth: "500px", width: "100%",
               }}
             >
-              {/* Overline */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px", marginBottom: "28px" }}>
-                <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
-                <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
-                  Welcome to groupdrop
-                </span>
-                <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+              {steps[welcomeStep - 1]}
+
+              {/* Step indicator */}
+              <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "36px" }}>
+                {[1, 2, 3].map((s) => (
+                  <div key={s} style={{
+                    width: s === welcomeStep ? "20px" : "6px", height: "6px",
+                    borderRadius: "3px", backgroundColor: "var(--gold)",
+                    opacity: s === welcomeStep ? 1 : 0.3,
+                    transition: "all 0.3s ease",
+                  }} />
+                ))}
               </div>
-
-              {/* Tier headline */}
-              <h2 className="font-display" style={{
-                fontSize: "clamp(36px, 6vw, 52px)",
-                fontWeight: 500,
-                lineHeight: 1.05,
-                letterSpacing: "-0.01em",
-                marginBottom: "20px",
-              }}>
-                <em style={{ fontStyle: "italic" }}>{meta.name}</em>
-              </h2>
-
-              {/* Tier note */}
-              <p style={{
-                fontSize: "15px",
-                fontWeight: 300,
-                lineHeight: 1.75,
-                color: "var(--ink-muted)",
-                letterSpacing: "0.01em",
-                marginBottom: "40px",
-              }}>
-                {meta.note}
-              </p>
-
-              {/* CTA */}
-              <button
-                onClick={dismissWelcome}
-                className="btn-primary"
-                style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit" }}
-              >
-                View open drops →
-              </button>
             </div>
           </div>
         );

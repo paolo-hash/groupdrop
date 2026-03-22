@@ -106,8 +106,10 @@ const TIER_LIMITS: Record<string, number> = {
 
 type Profile = {
   tier: string | null;
+  billing_cycle: string | null;
   drops_used_this_month: number;
   full_name: string | null;
+  created_at: string | null;
 };
 
 export default function DropPage({
@@ -199,7 +201,7 @@ export default function DropPage({
       if (user) {
         const { data } = await supabase
           .from("profiles")
-          .select("tier, drops_used_this_month, full_name")
+          .select("tier, billing_cycle, drops_used_this_month, full_name, created_at")
           .eq("id", user.id)
           .single();
         if (data) setProfile(data as Profile);
@@ -397,17 +399,26 @@ export default function DropPage({
         line_total_cents: x.lineTotal,
       }));
 
+      const totalUnits = orderItems.reduce((sum, item) => sum + item.qty, 0);
+
       await supabase
         .from("orders")
         .insert({
           user_id: user.id,
           user_email: user.email,
           user_name: profile?.full_name ?? null,
+          user_current_plan: profile?.tier ?? null,
+          user_current_billing_cycle: profile?.billing_cycle ?? null,
+          user_created_at: profile?.created_at ?? null,
           drop_id: drop.id,
           drop_slug: drop.slug,
           drop_name: drop.name,
+          drop_closes_at: drop.closesAt ?? null,
+          drop_target_cents: drop.targetCents,
+          drop_raised_cents_at_order: drop.raisedCents,
           items: orderItems,
           total_cents: cartTotal,
+          total_units: totalUnits,
           status: "pending",
         });
     }

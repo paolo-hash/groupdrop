@@ -195,6 +195,9 @@ export default function AccountPage() {
               <Link href="/#drops" className="nav-link" style={{ textDecoration: "none" }}>Drops</Link>
               <Link href="/about" className="nav-link" style={{ textDecoration: "none" }}>About</Link>
               <Link href="/faq" className="nav-link" style={{ textDecoration: "none" }}>FAQ</Link>
+              {email === process.env.NEXT_PUBLIC_ADMIN_EMAIL && (
+                <Link href="/admin" className="nav-link" style={{ textDecoration: "none", color: "var(--gold)" }}>Admin</Link>
+              )}
               <button
                 onClick={handleSignOut}
                 className="nav-link"
