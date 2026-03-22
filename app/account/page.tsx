@@ -537,21 +537,30 @@ export default function AccountPage() {
 
           {/* ── Footer ────────────────────────────────────── */}
           <hr className="gold-rule" />
-          <footer style={{
-            padding: "28px 0 40px", display: "flex", justifyContent: "space-between",
-            alignItems: "center", flexWrap: "wrap", gap: "16px",
-          }}>
-            <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
-              groupdrop
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "28px", flexWrap: "wrap" }}>
-              <Link href="/about" className="nav-link" style={{ textDecoration: "none" }}>About</Link>
-              <Link href="/faq" className="nav-link" style={{ textDecoration: "none" }}>FAQ</Link>
-              <a href="mailto:hello@groupdrop.com" className="nav-link" style={{ textDecoration: "none" }}>Concierge</a>
+          <footer style={{ padding: "28px 0 40px" }}>
+            <div style={{
+              display: "flex", justifyContent: "space-between",
+              alignItems: "center", flexWrap: "wrap", gap: "16px",
+              marginBottom: "20px",
+            }}>
+              <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
+                groupdrop
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "28px", flexWrap: "wrap" }}>
+                <Link href="/about" className="nav-link" style={{ textDecoration: "none" }}>About</Link>
+                <Link href="/faq" className="nav-link" style={{ textDecoration: "none" }}>FAQ</Link>
+                <a href="mailto:hello@groupdrop.com" className="nav-link" style={{ textDecoration: "none" }}>Concierge</a>
+              </div>
+              <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
+                &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
+              </span>
             </div>
-            <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
-              &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
-            </span>
+            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", paddingTop: "4px" }}>
+              <Link href="/terms" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Service</Link>
+              <Link href="/terms-of-sale" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Sale</Link>
+              <Link href="/privacy" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Privacy Policy</Link>
+              <Link href="/cookies" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Cookie Policy</Link>
+            </div>
           </footer>
 
         </div>

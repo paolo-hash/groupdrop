@@ -345,30 +345,32 @@ function SignupForm() {
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               {tier === "essentialist" && (
                 <>
-                  <FeatureLine text="Access to view all drops" />
-                  <FeatureLine text="Join up to 2 drops per month" />
+                  <FeatureLine text="Save on 2 curated drops per month" />
+                  <FeatureLine text="Insider pricing — 30–40% below retail" />
+                  <FeatureLine text="Drop previews & early intel" />
+                  <FeatureLine text="Member newsletter" />
                 </>
               )}
               {tier === "enthusiast" && (
                 <>
-                  <FeatureLine text="Access to view all drops" />
-                  <FeatureLine text="Join up to 5 drops per month" />
-                  <FeatureLine text="Free shipping over $150" />
+                  <FeatureLine text="Save on 5 curated drops per month" />
+                  <FeatureLine text="Insider pricing — 30–40% below retail" />
+                  <FeatureLine text="Drop previews & early intel" />
+                  <FeatureLine text="Free shipping on orders over $150" />
                 </>
               )}
               {tier === "curator" && (
                 <>
-                  <FeatureLine text="Access to view all drops" />
                   <FeatureLine text="Unlimited drops per month" />
-                  <FeatureLine text="24-hour early access to drops" />
+                  <FeatureLine text="Insider pricing — 30–40% below retail" />
+                  <FeatureLine text="24-hour early access to every drop" />
                   <FeatureLine text="Free shipping on all orders" />
                 </>
               )}
             </div>
 
             <p style={{ marginTop: "24px", fontSize: "11px", fontWeight: 300, lineHeight: 1.7, color: "var(--ink-muted)" }}>
-              Payment will be collected after account creation.
-              Cancel anytime.
+              Never charged until a drop funds. Founding member pricing locked in for life. Cancel anytime.
             </p>
           </div>
 
@@ -385,16 +387,30 @@ function SignupForm() {
 
       {/* ── Footer ──────────────────────────────────────────── */}
       <hr className="gold-rule" />
-      <footer style={{
-        padding: "28px 0 40px", display: "flex", justifyContent: "space-between",
-        alignItems: "center", flexWrap: "wrap", gap: "12px",
-      }}>
-        <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
-          groupdrop
-        </span>
-        <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
-          &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
-        </span>
+      <footer style={{ padding: "28px 0 40px" }}>
+        <div style={{
+          display: "flex", justifyContent: "space-between",
+          alignItems: "center", flexWrap: "wrap", gap: "16px",
+          marginBottom: "20px",
+        }}>
+          <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
+            groupdrop
+          </span>
+          <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+            <Link href="/about" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>About</Link>
+            <Link href="/faq" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>FAQ</Link>
+            <a href="mailto:hello@groupdrop.com" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>Concierge</a>
+          </div>
+          <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
+            &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", paddingTop: "4px" }}>
+          <Link href="/terms" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Service</Link>
+          <Link href="/terms-of-sale" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Sale</Link>
+          <Link href="/privacy" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Privacy Policy</Link>
+          <Link href="/cookies" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Cookie Policy</Link>
+        </div>
       </footer>
 
     </div>

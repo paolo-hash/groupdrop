@@ -20,6 +20,7 @@ type RawDrop = {
   /* CHANGE: Added closes_at for countdown */
   closes_at?: string | null;
   hero_image_url?: string | null;
+  description?: string | null;
 };
 
 type NormalizedDrop = {
@@ -32,6 +33,7 @@ type NormalizedDrop = {
   /* CHANGE: Added closes_at for countdown */
   closesAt: string | null;
   heroImageUrl: string | null;
+  description: string | null;
 };
 
 type Sku = {
@@ -70,6 +72,7 @@ function normalizeDrop(row: RawDrop): NormalizedDrop {
     /* CHANGE: Pass through closes_at for countdown */
     closesAt: row.closes_at ?? null,
     heroImageUrl: row.hero_image_url ?? null,
+    description: row.description ?? null,
   };
 }
 
@@ -122,6 +125,7 @@ export default function DropPage({
   const [mounted, setMounted] = useState(false);
   /* CHANGE: Added profile state to track tier and drops used this month */
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   /* CHANGE: tick state for live countdown */
   const [tick, setTick] = useState(0);
 
@@ -192,13 +196,15 @@ export default function DropPage({
   useEffect(() => {
     async function fetchProfile() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("tier, drops_used_this_month, full_name")
-        .eq("id", user.id)
-        .single();
-      if (data) setProfile(data as Profile);
+      if (user) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("tier, drops_used_this_month, full_name")
+          .eq("id", user.id)
+          .single();
+        if (data) setProfile(data as Profile);
+      }
+      setAuthChecked(true);
     }
     fetchProfile();
   }, []);
@@ -580,9 +586,9 @@ export default function DropPage({
                   </button>
                 </>
               ) : (
-                <a href="#cart" className="btn-primary" style={{ borderRadius: "2px", textDecoration: "none" }}>
-                  View cart
-                </a>
+                <Link href={`/login?redirect=/drops/${slug}`} className="btn-primary" style={{ borderRadius: "2px", textDecoration: "none" }}>
+                  Sign in →
+                </Link>
               )}
             </div>
           </div>
@@ -654,8 +660,17 @@ export default function DropPage({
               color: "var(--ink-muted)", maxWidth: "480px",
               letterSpacing: "0.01em", marginBottom: "28px",
             }}>
-              Build your cart. Your total is what you&apos;re authorizing — and what pushes
-              this drop toward the collective threshold.
+              {(() => {
+                const text = drop.description ?? "Build your cart. Your total is what you\u2019re authorizing — and what pushes this drop toward the collective threshold.";
+                const split = text.indexOf("||");
+                if (split === -1) return <>{text}</>;
+                return (
+                  <>
+                    <em style={{ fontStyle: "italic" }}>{text.slice(0, split)}</em>
+                    {text.slice(split + 2)}
+                  </>
+                );
+              })()}
             </p>
 
             {/* Member count — hero social proof */}
@@ -932,43 +947,72 @@ export default function DropPage({
                   </span>
                 </div>
 
-                <button
-                  onClick={handleJoin}
-                  disabled={reachedTarget}
-                  className={reachedTarget ? "" : "btn-primary"}
-                  style={{
-                    width: "100%", borderRadius: "2px", border: "none",
-                    cursor: reachedTarget ? "not-allowed" : "pointer", fontFamily: "inherit",
-                    ...(reachedTarget ? {
-                      backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
-                      fontSize: "11px", letterSpacing: "0.08em",
-                      textTransform: "uppercase" as const, fontWeight: 500, padding: "12px 24px",
-                    } : {}),
-                  }}
-                >
-                  {reachedTarget
-                    ? "Target reached"
-                    : cartTotal <= 0
-                    ? "Join this drop \u2192"
-                    : "Authorize " + moneyFromCents(cartTotal) + " \u2192"}
-                </button>
-
-                {statusMsg && (
-                  <div style={{
-                    marginTop: "16px", borderLeft: "2px solid var(--gold)",
-                    backgroundColor: "var(--parchment)", padding: "10px 10px 10px 14px",
-                    borderRadius: "0 2px 2px 0",
-                  }}>
-                    <p style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 400, letterSpacing: "0.01em" }}>
-                      {statusMsg}
+                {authChecked && !profile ? (
+                  /* ── Member gate — logged-out visitors ── */
+                  <div style={{ borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
+                    <p style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "10px" }}>
+                      Members only
                     </p>
+                    <p style={{ fontSize: "13px", fontWeight: 300, lineHeight: 1.7, color: "var(--ink-muted)", marginBottom: "20px" }}>
+                      Sign in to authorize your allocation and join this drop.
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      <Link
+                        href={`/login?redirect=/drops/${slug}`}
+                        className="btn-primary"
+                        style={{ borderRadius: "2px", textDecoration: "none", textAlign: "center", display: "block" }}
+                      >
+                        Sign in to join →
+                      </Link>
+                      <Link
+                        href="/join"
+                        style={{
+                          display: "block", textAlign: "center",
+                          fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase",
+                          fontWeight: 500, color: "var(--ink-muted)", textDecoration: "none",
+                          padding: "10px 0",
+                        }}
+                      >
+                        Not a member? Join groupdrop →
+                      </Link>
+                    </div>
                   </div>
-                )}
+                ) : (
+                  <>
+                    <button
+                      onClick={handleJoin}
+                      disabled={reachedTarget}
+                      className={reachedTarget ? "" : "btn-primary"}
+                      style={{
+                        width: "100%", borderRadius: "2px", border: "none",
+                        cursor: reachedTarget ? "not-allowed" : "pointer", fontFamily: "inherit",
+                        ...(reachedTarget ? {
+                          backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
+                          fontSize: "11px", letterSpacing: "0.08em",
+                          textTransform: "uppercase" as const, fontWeight: 500, padding: "12px 24px",
+                        } : {}),
+                      }}
+                    >
+                      {reachedTarget
+                        ? "Target reached"
+                        : cartTotal <= 0
+                        ? "Join this drop \u2192"
+                        : "Authorize " + moneyFromCents(cartTotal) + " \u2192"}
+                    </button>
 
-                <p style={{ marginTop: "20px", fontSize: "11px", fontWeight: 300, lineHeight: 1.7, color: "var(--ink-muted)", letterSpacing: "0.01em" }}>
-                  Design mode: this simulates joining. In the real flow, we&apos;ll
-                  authorize your card now and only charge if the drop completes.
-                </p>
+                    {statusMsg && (
+                      <div style={{
+                        marginTop: "16px", borderLeft: "2px solid var(--gold)",
+                        backgroundColor: "var(--parchment)", padding: "10px 10px 10px 14px",
+                        borderRadius: "0 2px 2px 0",
+                      }}>
+                        <p style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 400, letterSpacing: "0.01em" }}>
+                          {statusMsg}
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               {/* Tier upgrade nudge — shown to essentialist and enthusiast members */}
               {(profile?.tier === "essentialist" || profile?.tier === "enthusiast") && (
@@ -998,16 +1042,30 @@ export default function DropPage({
 
           {/* ── Footer ──────────────────────────────────────────── */}
           <hr className="gold-rule" style={{ marginTop: "120px" }} />
-          <footer style={{
-            padding: "28px 0 40px", display: "flex", justifyContent: "space-between",
-            alignItems: "center", flexWrap: "wrap", gap: "12px",
-          }}>
-            <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
-              groupdrop
-            </span>
-            <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
-              &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
-            </span>
+          <footer style={{ padding: "28px 0 40px" }}>
+            <div style={{
+              display: "flex", justifyContent: "space-between",
+              alignItems: "center", flexWrap: "wrap", gap: "16px",
+              marginBottom: "20px",
+            }}>
+              <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
+                groupdrop
+              </span>
+              <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+                <Link href="/about" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>About</Link>
+                <Link href="/faq" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>FAQ</Link>
+                <a href="mailto:hello@groupdrop.com" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>Concierge</a>
+              </div>
+              <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
+                &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", paddingTop: "4px" }}>
+              <Link href="/terms" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Service</Link>
+              <Link href="/terms-of-sale" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Sale</Link>
+              <Link href="/privacy" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Privacy Policy</Link>
+              <Link href="/cookies" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Cookie Policy</Link>
+            </div>
           </footer>
 
         </div>
@@ -1028,26 +1086,36 @@ export default function DropPage({
             {moneyFromCents(cartTotal)}
           </span>
         </div>
-        <button
-          onClick={handleJoin}
-          disabled={reachedTarget}
-          className={reachedTarget ? "" : "btn-primary"}
-          style={{
-            borderRadius: "2px", border: "none", cursor: reachedTarget ? "not-allowed" : "pointer",
-            fontFamily: "inherit", flexShrink: 0,
-            ...(reachedTarget ? {
-              backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
-              fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" as const,
-              fontWeight: 500, padding: "12px 20px",
-            } : {}),
-          }}
-        >
-          {reachedTarget
-            ? "Target reached"
-            : cartTotal <= 0
-            ? "Add items →"
-            : `Authorize ${moneyFromCents(cartTotal)} →`}
-        </button>
+        {authChecked && !profile ? (
+          <Link
+            href={`/login?redirect=/drops/${slug}`}
+            className="btn-primary"
+            style={{ borderRadius: "2px", textDecoration: "none", flexShrink: 0 }}
+          >
+            Sign in to join →
+          </Link>
+        ) : (
+          <button
+            onClick={handleJoin}
+            disabled={reachedTarget}
+            className={reachedTarget ? "" : "btn-primary"}
+            style={{
+              borderRadius: "2px", border: "none", cursor: reachedTarget ? "not-allowed" : "pointer",
+              fontFamily: "inherit", flexShrink: 0,
+              ...(reachedTarget ? {
+                backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
+                fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                fontWeight: 500, padding: "12px 20px",
+              } : {}),
+            }}
+          >
+            {reachedTarget
+              ? "Target reached"
+              : cartTotal <= 0
+              ? "Add items →"
+              : `Authorize ${moneyFromCents(cartTotal)} →`}
+          </button>
+        )}
       </div>
 
       </main>

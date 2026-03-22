@@ -7,6 +7,15 @@ import { supabase } from "../lib/supabaseClient";
 export default function AboutPage() {
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showConcierge, setShowConcierge] = useState(false);
+  const [conciergeForm, setConciergeForm] = useState({ name: "", email: "", topic: "General Question", message: "" });
+  const [conciergeSent, setConciergeSent] = useState(false);
+
+  const openConcierge = () => {
+    setConciergeSent(false);
+    setConciergeForm({ name: "", email: "", topic: "General Question", message: "" });
+    setShowConcierge(true);
+  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
@@ -23,6 +32,61 @@ export default function AboutPage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--cream)", color: "var(--ink)" }}>
+
+      {/* ── Concierge modal ─────────────────────────────────── */}
+      {showConcierge && (
+        <div onClick={() => setShowConcierge(false)} style={{ position: "fixed", inset: 0, zIndex: 100, backgroundColor: "rgba(26,24,20,0.55)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ backgroundColor: "#FDFAF5", border: "1px solid var(--border)", borderRadius: "4px", padding: "48px 40px", maxWidth: "520px", width: "100%", position: "relative" }}>
+            <div style={{ marginBottom: "28px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+                <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>Concierge</span>
+              </div>
+              <h3 className="font-display" style={{ fontSize: "28px", fontWeight: 500, fontStyle: "italic" }}>How can we help?</h3>
+            </div>
+            {conciergeSent ? (
+              <div style={{ textAlign: "center", padding: "32px 0" }}>
+                <p className="font-display" style={{ fontSize: "24px", fontWeight: 500, fontStyle: "italic", marginBottom: "12px" }}>Message received.</p>
+                <p style={{ fontSize: "14px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.7 }}>Our concierge team will be in touch within one business day.</p>
+                <button onClick={() => setShowConcierge(false)} style={{ marginTop: "32px", background: "var(--gold)", color: "var(--ink)", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500, padding: "12px 24px", borderRadius: "2px" }}>Close</button>
+              </div>
+            ) : (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const subject = encodeURIComponent(`[Groupdrop Concierge] ${conciergeForm.topic}`);
+                const body = encodeURIComponent(`Name: ${conciergeForm.name}\nEmail: ${conciergeForm.email}\nTopic: ${conciergeForm.topic}\n\n${conciergeForm.message}`);
+                window.location.href = `mailto:hello@groupdrop.com?subject=${subject}&body=${body}`;
+                setConciergeSent(true);
+              }} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Full Name</label>
+                    <input required placeholder="Jane Smith" value={conciergeForm.name} onChange={(e) => setConciergeForm((f) => ({ ...f, name: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Email</label>
+                    <input required type="email" placeholder="jane@example.com" value={conciergeForm.email} onChange={(e) => setConciergeForm((f) => ({ ...f, email: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Topic</label>
+                  <select required value={conciergeForm.topic} onChange={(e) => setConciergeForm((f) => ({ ...f, topic: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }}>
+                    {["General Question", "Order Issue", "Membership & Billing", "Shipping & Logistics", "Returns & Replacements", "Other"].map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Message</label>
+                  <textarea required placeholder="Tell us what's on your mind…" rows={5} value={conciergeForm.message} onChange={(e) => setConciergeForm((f) => ({ ...f, message: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", resize: "vertical", boxSizing: "border-box" as const }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                  <button type="button" onClick={() => setShowConcierge(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, fontFamily: "inherit" }}>Cancel</button>
+                  <button type="submit" style={{ background: "var(--gold)", color: "var(--ink)", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500, padding: "12px 24px", borderRadius: "2px" }}>Send message →</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
       <style>{`
         :root {
           --cream: #F7F4EE;
@@ -400,19 +464,29 @@ export default function AboutPage() {
           </div>
         </section>
 
+        <hr style={{ border: "none", borderTop: "1px solid var(--gold)", opacity: 0.35, margin: "80px 0 0" }} />
+        <footer style={{ padding: "28px 0 40px", maxWidth: "1100px", margin: "0 auto" }}>
+          <div style={{
+            display: "flex", justifyContent: "space-between",
+            alignItems: "center", flexWrap: "wrap", gap: "16px",
+            marginBottom: "20px",
+          }}>
+            <span className="font-display" style={{ fontSize: "15px", fontWeight: 400, letterSpacing: "0.05em", color: "var(--ink-muted)" }}>groupdrop</span>
+            <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+              <Link href="/about" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>About</Link>
+              <Link href="/faq" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>FAQ</Link>
+              <button onClick={openConcierge} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Concierge</button>
+            </div>
+            <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>&copy; {new Date().getFullYear()} groupdrop. All rights reserved.</span>
+          </div>
+          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", paddingTop: "4px" }}>
+            <Link href="/terms" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Service</Link>
+            <Link href="/terms-of-sale" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Sale</Link>
+            <Link href="/privacy" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Privacy Policy</Link>
+            <Link href="/cookies" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Cookie Policy</Link>
+          </div>
+        </footer>
       </main>
-
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid var(--border)", padding: "32px 28px" }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-          <span className="font-display" style={{ fontSize: "16px", fontWeight: 500, letterSpacing: "0.04em", color: "var(--ink-muted)" }}>
-            groupdrop
-          </span>
-          <span style={{ fontSize: "11px", letterSpacing: "0.08em", color: "var(--ink-muted)", fontWeight: 300 }}>
-            © {new Date().getFullYear()} Groupdrop. All rights reserved.
-          </span>
-        </div>
-      </footer>
 
     </div>
   );

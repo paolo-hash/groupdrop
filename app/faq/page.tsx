@@ -356,14 +356,26 @@ export default function FaqPage() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid var(--border)", padding: "32px 28px" }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-          <span className="font-display" style={{ fontSize: "16px", fontWeight: 500, letterSpacing: "0.04em", color: "var(--ink-muted)" }}>groupdrop</span>
-          <div style={{ display: "flex", gap: "28px", alignItems: "center" }}>
-            <Link href="/about" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>About</Link>
-            <Link href="/faq" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>FAQ</Link>
-            <button onClick={openConcierge} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Concierge</button>
+        <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+          <div style={{
+            display: "flex", justifyContent: "space-between",
+            alignItems: "center", flexWrap: "wrap", gap: "16px",
+            marginBottom: "20px",
+          }}>
+            <span className="font-display" style={{ fontSize: "16px", fontWeight: 500, letterSpacing: "0.04em", color: "var(--ink-muted)" }}>groupdrop</span>
+            <div style={{ display: "flex", gap: "28px", alignItems: "center" }}>
+              <Link href="/about" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>About</Link>
+              <Link href="/faq" style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, textDecoration: "none" }}>FAQ</Link>
+              <button onClick={openConcierge} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, fontFamily: "inherit", padding: 0 }}>Concierge</button>
+            </div>
+            <span style={{ fontSize: "11px", letterSpacing: "0.08em", color: "var(--ink-muted)", fontWeight: 300 }}>© {new Date().getFullYear()} Groupdrop. All rights reserved.</span>
           </div>
-          <span style={{ fontSize: "11px", letterSpacing: "0.08em", color: "var(--ink-muted)", fontWeight: 300 }}>© {new Date().getFullYear()} Groupdrop. All rights reserved.</span>
+          <div style={{ display: "flex", gap: "24px", flexWrap: "wrap", paddingTop: "4px" }}>
+            <Link href="/terms" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Service</Link>
+            <Link href="/terms-of-sale" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Terms of Sale</Link>
+            <Link href="/privacy" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Privacy Policy</Link>
+            <Link href="/cookies" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Cookie Policy</Link>
+          </div>
         </div>
       </footer>
     </div>

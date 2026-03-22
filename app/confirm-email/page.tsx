@@ -1,54 +1,48 @@
 "use client";
 
 /*
-  File location: app/login/page.tsx
+  File location: app/confirm-email/page.tsx
 
-  Allows existing users to sign back in.
-  After login, redirects to /#drops by default, or to a
-  ?redirect= param if the user was sent here from a protected page.
+  Shown after signup to prompt users to confirm their email address.
+  Reads the email from the ?email= URL param so we can display it
+  and use it for the resend action.
+
+  Supabase sends a confirmation link — once clicked, the user's
+  account is fully active and they can sign in.
 */
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 
 /* ─────────────────────────────────────────────────────────────
    Inner component — reads search params
 ───────────────────────────────────────────────────────────── */
-function LoginForm() {
-  const router = useRouter();
+function ConfirmEmailContent() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/";
+  const email = searchParams.get("email") ?? "";
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [resendState, setResendState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [resendError, setResendError] = useState("");
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  async function handleResend() {
+    if (!email) return;
+    setResendState("sending");
+    setResendError("");
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.resend({
+      type: "signup",
       email,
-      password,
     });
 
-    if (signInError) {
-      setError(signInError.message);
-      setLoading(false);
+    if (error) {
+      setResendError(error.message);
+      setResendState("error");
       return;
     }
 
-    setLoading(false);
-    /*
-      FIX: Using window.location.href instead of router.push so the browser
-      does a full page reload. This ensures the middleware reads the fresh
-      Supabase session cookie before deciding whether to allow access.
-    */
-    window.location.href = redirectTo;
+    setResendState("sent");
   }
 
   return (
@@ -60,7 +54,7 @@ function LoginForm() {
         <div className="animate-fade-up" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "28px" }}>
           <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)" }} />
           <span style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
-            Welcome back
+            One more step
           </span>
         </div>
 
@@ -68,150 +62,108 @@ function LoginForm() {
           fontSize: "clamp(36px, 6vw, 72px)", fontWeight: 500,
           lineHeight: 1.02, letterSpacing: "-0.01em", marginBottom: "16px",
         }}>
-          <em style={{ fontStyle: "italic" }}>Sign in.</em>
+          <em style={{ fontStyle: "italic" }}>Check your inbox.</em>
         </h1>
 
         <p className="animate-fade-up delay-2" style={{
           fontSize: "15px", fontWeight: 300, lineHeight: 1.75,
-          color: "var(--ink-muted)", maxWidth: "400px", letterSpacing: "0.01em",
+          color: "var(--ink-muted)", maxWidth: "440px", letterSpacing: "0.01em",
         }}>
-          Access your drops, track your allocations, and manage your membership.
+          We sent a confirmation link to verify your email address.
         </p>
 
       </section>
 
       <hr className="gold-rule" />
 
-      {/* ── Form ──────────────────────────────────────────── */}
-      <section style={{ paddingTop: "64px", paddingBottom: "80px", maxWidth: "480px" }}>
+      {/* ── Content ────────────────────────────────────────── */}
+      <section style={{ paddingTop: "64px", paddingBottom: "80px", maxWidth: "560px" }}>
 
-        <p style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "8px" }}>
-          Your Account
-        </p>
-        <h2 className="font-display" style={{ fontSize: "28px", fontWeight: 500, letterSpacing: "-0.01em", marginBottom: "32px" }}>
-          Sign in to groupdrop
-        </h2>
-
-        <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-
-          {/* Email */}
-          <div>
-            <label style={{
-              display: "block", fontSize: "10px", letterSpacing: "0.16em",
-              textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "8px",
-            }}>
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              style={{
-                width: "100%", boxSizing: "border-box",
-                backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
-                borderRadius: "2px", padding: "12px 16px",
-                fontSize: "14px", fontWeight: 300, color: "var(--ink)",
-                fontFamily: "inherit", outline: "none",
-                transition: "border-color 0.2s",
-              }}
-              onFocus={(e) => e.target.style.borderColor = "var(--gold)"}
-              onBlur={(e) => e.target.style.borderColor = "var(--border)"}
-            />
+        {/* Main card */}
+        <div className="grain" style={{
+          backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
+          borderRadius: "4px", padding: "40px", position: "relative", overflow: "hidden",
+          marginBottom: "32px",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+            <div style={{ width: "12px", height: "1px", backgroundColor: "var(--gold)" }} />
+            <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+              Confirmation sent
+            </span>
           </div>
 
-          {/* Password */}
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-              <label style={{
-                fontSize: "10px", letterSpacing: "0.16em",
-                textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500,
-              }}>
-                Password
-              </label>
-              {/*
-                Forgot password link — we'll build this page later.
-                Points to /forgot-password for now.
-              */}
-              <Link href="/forgot-password" style={{
-                fontSize: "11px", fontWeight: 300, color: "var(--gold)",
-                textDecoration: "none", letterSpacing: "0.02em",
-              }}>
-                Forgot password?
-              </Link>
-            </div>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your password"
-              style={{
-                width: "100%", boxSizing: "border-box",
-                backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
-                borderRadius: "2px", padding: "12px 16px",
-                fontSize: "14px", fontWeight: 300, color: "var(--ink)",
-                fontFamily: "inherit", outline: "none",
-                transition: "border-color 0.2s",
-              }}
-              onFocus={(e) => e.target.style.borderColor = "var(--gold)"}
-              onBlur={(e) => e.target.style.borderColor = "var(--border)"}
-            />
-          </div>
-
-          {/* Error message */}
-          {error && (
-            <div style={{
-              borderLeft: "2px solid #B85450",
-              backgroundColor: "#FDF5F5",
-              padding: "10px 10px 10px 14px",
-              borderRadius: "0 2px 2px 0",
-            }}>
-              <p style={{ fontSize: "12px", color: "#B85450", fontWeight: 400 }}>
-                {error}
-              </p>
-              {error.toLowerCase().includes("email") && error.toLowerCase().includes("confirm") && (
-                <p style={{ fontSize: "12px", color: "#B85450", fontWeight: 400, marginTop: "6px" }}>
-                  <Link
-                    href={`/confirm-email?email=${encodeURIComponent(email)}`}
-                    style={{ color: "#B85450", fontWeight: 500, textDecoration: "underline" }}
-                  >
-                    Resend confirmation email →
-                  </Link>
-                </p>
-              )}
-            </div>
+          {email && (
+            <p style={{ fontSize: "14px", fontWeight: 300, lineHeight: 1.75, color: "var(--ink-muted)", marginBottom: "20px" }}>
+              We sent a link to{" "}
+              <span style={{ color: "var(--ink)", fontWeight: 500 }}>{email}</span>.
+              Click the link in that email to activate your account.
+            </p>
           )}
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={loading ? "" : "btn-primary"}
-            style={{
-              width: "100%", borderRadius: "2px", border: "none",
-              cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit",
-              marginTop: "8px",
-              ...(loading ? {
-                backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
-                fontSize: "11px", letterSpacing: "0.08em",
-                textTransform: "uppercase" as const, fontWeight: 500, padding: "14px 24px",
-              } : { padding: "14px 24px" }),
-            }}
-          >
-            {loading ? "Signing in…" : "Sign in →"}
-          </button>
+          <p style={{ fontSize: "14px", fontWeight: 300, lineHeight: 1.75, color: "var(--ink-muted)" }}>
+            Once confirmed, you can sign in and complete your membership. Drop access, curated allocations, and member pricing will all be waiting.
+          </p>
+        </div>
 
-          {/* Sign up link */}
-          <p style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", textAlign: "center" }}>
-            Don&apos;t have an account?{" "}
-            <Link href="/join" style={{ color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
-              Join groupdrop
-            </Link>
+        {/* Didn't receive it? */}
+        <div style={{ borderTop: "1px solid var(--border)", paddingTop: "28px" }}>
+          <p style={{ fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "16px" }}>
+            Didn&apos;t receive it?
           </p>
 
-        </form>
+          <p style={{ fontSize: "13px", fontWeight: 300, lineHeight: 1.75, color: "var(--ink-muted)", marginBottom: "20px" }}>
+            Check your spam folder first. If it&apos;s not there, you can resend the confirmation below.
+          </p>
+
+          {resendState === "sent" ? (
+            <div style={{
+              borderLeft: "2px solid var(--gold)", backgroundColor: "#FDFAF5",
+              padding: "10px 10px 10px 14px", borderRadius: "0 2px 2px 0",
+            }}>
+              <p style={{ fontSize: "12px", color: "var(--ink-muted)", fontWeight: 400 }}>
+                Confirmation resent — check your inbox.
+              </p>
+            </div>
+          ) : (
+            <>
+              {resendState === "error" && resendError && (
+                <div style={{
+                  borderLeft: "2px solid #B85450", backgroundColor: "#FDF5F5",
+                  padding: "10px 10px 10px 14px", borderRadius: "0 2px 2px 0",
+                  marginBottom: "16px",
+                }}>
+                  <p style={{ fontSize: "12px", color: "#B85450", fontWeight: 400 }}>{resendError}</p>
+                </div>
+              )}
+              <button
+                onClick={handleResend}
+                disabled={resendState === "sending" || !email}
+                className={resendState === "sending" || !email ? "" : "btn-primary"}
+                style={{
+                  borderRadius: "2px", border: "none",
+                  cursor: resendState === "sending" || !email ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                  ...(resendState === "sending" || !email ? {
+                    backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
+                    fontSize: "11px", letterSpacing: "0.08em",
+                    textTransform: "uppercase" as const, fontWeight: 500, padding: "14px 24px",
+                  } : { padding: "14px 24px" }),
+                }}
+              >
+                {resendState === "sending" ? "Sending…" : "Resend confirmation →"}
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Sign in link */}
+        <p style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", marginTop: "32px" }}>
+          Already confirmed?{" "}
+          <Link href="/login" style={{ color: "var(--gold)", textDecoration: "none", fontWeight: 500 }}>
+            Sign in
+          </Link>
+        </p>
+
       </section>
 
       {/* ── Footer ──────────────────────────────────────────── */}
@@ -249,7 +201,7 @@ function LoginForm() {
 /* ─────────────────────────────────────────────────────────────
    Page
 ───────────────────────────────────────────────────────────── */
-export default function LoginPage() {
+export default function ConfirmEmailPage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: SHARED_STYLES }} />
@@ -277,11 +229,9 @@ export default function LoginPage() {
               </span>
             </Link>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
-              <Link href="/join" className="nav-link" style={{ textDecoration: "none" }}>
-                Join
-              </Link>
-            </div>
+            <Link href="/login" className="nav-link" style={{ textDecoration: "none" }}>
+              Sign in
+            </Link>
           </div>
         </header>
 
@@ -292,7 +242,7 @@ export default function LoginPage() {
             </p>
           </div>
         }>
-          <LoginForm />
+          <ConfirmEmailContent />
         </Suspense>
 
       </main>
