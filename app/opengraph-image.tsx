@@ -9,7 +9,7 @@ export const contentType = "image/png";
 function loadFont() {
   /* Read Cormorant Garamond italic 500 from the installed fontsource package */
   return readFileSync(
-    join(process.cwd(), "node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff2")
+    join(process.cwd(), "node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff")
   );
 }
 
