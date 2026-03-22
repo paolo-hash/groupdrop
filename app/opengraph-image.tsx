@@ -8,15 +8,16 @@ export const contentType = "image/png";
 async function loadFont() {
   /*
     Fetch Cormorant Garamond italic 500 from Google Fonts.
-    We request the CSS first to extract the actual woff2 URL,
-    then fetch the binary font data for Satori.
+    Google Fonts CSS lists extended unicode ranges first, Latin basic last.
+    We take the last match to get the Latin subset woff2 URL.
   */
   const css = await fetch(
-    "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500",
+    "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&subset=latin",
     { headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" } }
   ).then((r) => r.text());
 
-  const url = css.match(/src: url\(([^)]+)\) format\('woff2'\)/)?.[1];
+  const matches = [...css.matchAll(/url\(([^)]+)\)\s+format\('woff2'\)/g)];
+  const url = matches[matches.length - 1]?.[1];
   if (!url) return null;
 
   return fetch(url).then((r) => r.arrayBuffer());
@@ -79,7 +80,7 @@ export default async function Image() {
             color: "#1A1814",
             lineHeight: 0.95,
             marginBottom: "36px",
-            fontFamily: fontData ? "Cormorant Garamond" : "Georgia, serif",
+            fontFamily: "Cormorant Garamond",
             display: "flex",
           }}
         >
