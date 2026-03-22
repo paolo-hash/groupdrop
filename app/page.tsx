@@ -14,6 +14,7 @@ type Drop = {
   target: number;
   raised: number | null;
   closes_at: string;
+  hero_image_url: string | null;
 };
 
 /* ===============================
@@ -817,6 +818,39 @@ export default function Home() {
               </p>
             )}
 
+            {!loading && drops.length === 0 && (
+              <div style={{ paddingTop: '48px', paddingBottom: '80px', maxWidth: '480px' }}>
+                <div style={{ width: '32px', height: '1px', backgroundColor: 'var(--gold)', marginBottom: '28px' }} />
+                <h3 className="font-display" style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 500, lineHeight: 1.1, letterSpacing: '-0.01em', marginBottom: '16px' }}>
+                  <em style={{ fontStyle: 'italic' }}>Nothing open</em> right now.
+                </h3>
+                <p style={{ fontSize: '15px', fontWeight: 300, lineHeight: 1.8, color: 'var(--ink-muted)', marginBottom: '32px' }}>
+                  Our next drop is being curated. Leave your email and you&apos;ll be the first to know when it goes live.
+                </p>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.currentTarget;
+                    const email = (form.elements.namedItem('notify-email') as HTMLInputElement).value;
+                    window.location.href = `mailto:hello@groupdrop.com?subject=${encodeURIComponent('Notify me — Groupdrop')}&body=${encodeURIComponent(`Please notify me when the next drop goes live.\n\nEmail: ${email}`)}`;
+                    form.reset();
+                  }}
+                  style={{ display: 'flex', gap: '0' }}
+                >
+                  <input
+                    name="notify-email"
+                    type="email"
+                    required
+                    placeholder="your@email.com"
+                    style={{ flex: 1, backgroundColor: 'var(--parchment)', border: '1px solid var(--border)', borderRight: 'none', padding: '11px 16px', fontSize: '13px', fontWeight: 300, fontFamily: 'inherit', color: 'var(--ink)', outline: 'none' }}
+                  />
+                  <button type="submit" className="btn-primary" style={{ borderRadius: '0', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                    Notify me
+                  </button>
+                </form>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
               {!loading && drops.map((drop) => {
 
@@ -845,16 +879,28 @@ export default function Home() {
                     key={drop.id}
                     className="drop-card grain"
                     style={{
-                      backgroundColor: '#FDFAF5', /* slightly warmer than pure white */
+                      backgroundColor: '#FDFAF5',
                       border: '1px solid var(--border)',
                       borderRadius: '4px',
-                      padding: '32px',
                       position: 'relative',
                       overflow: 'hidden',
                       display: 'flex',
                       flexDirection: 'column',
                     }}
                   >
+
+                    {/* Hero image */}
+                    {drop.hero_image_url && (
+                      <div style={{ height: '200px', overflow: 'hidden', flexShrink: 0 }}>
+                        <img
+                          src={drop.hero_image_url}
+                          alt={drop.title}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+                        />
+                      </div>
+                    )}
+
+                    <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', flex: 1 }}>
 
                     {/*
                       CHANGE: Status badge — uses .status-badge class for small-caps treatment.
@@ -1029,6 +1075,7 @@ export default function Home() {
                       View allocation →
                     </Link>
 
+                    </div>{/* end content wrapper */}
                   </div>
                 );
               })}

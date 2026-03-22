@@ -19,6 +19,7 @@ type RawDrop = {
   raised_cents?: number | string | null;
   /* CHANGE: Added closes_at for countdown */
   closes_at?: string | null;
+  hero_image_url?: string | null;
 };
 
 type NormalizedDrop = {
@@ -30,6 +31,7 @@ type NormalizedDrop = {
   usesCentsColumns: boolean;
   /* CHANGE: Added closes_at for countdown */
   closesAt: string | null;
+  heroImageUrl: string | null;
 };
 
 type Sku = {
@@ -67,6 +69,7 @@ function normalizeDrop(row: RawDrop): NormalizedDrop {
     usesCentsColumns,
     /* CHANGE: Pass through closes_at for countdown */
     closesAt: row.closes_at ?? null,
+    heroImageUrl: row.hero_image_url ?? null,
   };
 }
 
@@ -588,7 +591,7 @@ export default function DropPage({
         <div className="page-bottom-pad" style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 28px" }}>
 
           {/* ── Drop Hero ─────────────────────────────────────── */}
-          <section style={{ paddingTop: "100px" }}>
+          <section style={{ paddingTop: "60px" }}>
 
             <Link href="/" style={{
               display: "inline-flex", alignItems: "center", gap: "6px",
@@ -669,6 +672,17 @@ export default function DropPage({
                     ? "Be the first to join this drop"
                     : <>{memberCount} <span style={{ color: "var(--ink-muted)", fontWeight: 300, textTransform: "none", letterSpacing: 0 }}>member{memberCount === 1 ? "" : "s"} joined this drop</span></>}
                 </span>
+              </div>
+            )}
+
+            {/* Hero image */}
+            {drop.heroImageUrl && (
+              <div style={{ marginBottom: "16px", borderRadius: "4px", overflow: "hidden" }}>
+                <img
+                  src={drop.heroImageUrl}
+                  alt={drop.name}
+                  style={{ width: "100%", height: "420px", objectFit: "cover", objectPosition: "center", display: "block" }}
+                />
               </div>
             )}
 
