@@ -1,30 +1,20 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "fs";
+import { join } from "path";
 
-export const runtime = "edge";
 export const alt = "groupdrop — luxury goods at collective pricing";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-async function loadFont() {
-  /*
-    Fetch Cormorant Garamond italic 500 from Google Fonts.
-    Google Fonts CSS lists extended unicode ranges first, Latin basic last.
-    We take the last match to get the Latin subset woff2 URL.
-  */
-  const css = await fetch(
-    "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,500&subset=latin",
-    { headers: { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" } }
-  ).then((r) => r.text());
-
-  const matches = [...css.matchAll(/url\(([^)]+)\)\s+format\('woff2'\)/g)];
-  const url = matches[matches.length - 1]?.[1];
-  if (!url) return null;
-
-  return fetch(url).then((r) => r.arrayBuffer());
+function loadFont() {
+  /* Read Cormorant Garamond italic 500 from the installed fontsource package */
+  return readFileSync(
+    join(process.cwd(), "node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-italic.woff2")
+  );
 }
 
 export default async function Image() {
-  const fontData = await loadFont().catch(() => null);
+  const fontData = loadFont();
 
   return new ImageResponse(
     (
