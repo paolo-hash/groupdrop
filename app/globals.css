@@ -24,3 +24,32 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Page transition ──────────────────────────────────────── */
+.page-transition {
+  animation: pageFadeIn 0.35s ease forwards;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scroll reveal ────────────────────────────────────────── */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-reveal.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger siblings — each .scroll-reveal inside a group gets a delay */
+.scroll-reveal:nth-child(2) { transition-delay: 0.15s; }
+.scroll-reveal:nth-child(3) { transition-delay: 0.30s; }
+.scroll-reveal:nth-child(4) { transition-delay: 0.45s; }
+.scroll-reveal:nth-child(5) { transition-delay: 0.60s; }

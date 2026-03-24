@@ -124,7 +124,6 @@ export default function DropPage({
   const [qtyById, setQtyById] = useState<Record<string, number>>({});
   const [statusMsg, setStatusMsg] = useState("");
   const [loading, setLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
   /* CHANGE: Added profile state to track tier and drops used this month */
   const [profile, setProfile] = useState<Profile | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -223,10 +222,6 @@ export default function DropPage({
     fetchProfile();
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 100);
-    return () => clearTimeout(t);
-  }, []);
 
   /* CHANGE: Countdown ticker — updates every second */
   useEffect(() => {
@@ -761,7 +756,7 @@ export default function DropPage({
                 </span>
               </div>
               <div style={{ height: "3px", backgroundColor: "var(--parchment)", borderRadius: "2px", overflow: "hidden", marginBottom: "12px" }}>
-                <div className="progress-fill" style={{ height: "100%", width: mounted ? percent + "%" : "0%" }} />
+                <div className="progress-fill" style={{ height: "100%", width: drop ? `${Math.min((animatedRaisedCents / drop.targetCents) * 100, 100)}%` : "0%" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{
@@ -1307,7 +1302,7 @@ const SHARED_STYLES = [
   ".nav-link::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 1px; background: var(--gold); transition: width 0.3s ease; }",
   ".nav-link:hover { color: var(--ink); }",
   ".nav-link:hover::after { width: 100%; }",
-  ".progress-fill { background: linear-gradient(90deg, var(--gold), var(--gold-light)); transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1); }",
+  ".progress-fill { background: linear-gradient(90deg, var(--gold), var(--gold-light)); }",
   ".drop-card { transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; }",
   ".drop-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(26,24,20,0.08); border-color: var(--gold); }",
   ".btn-primary { background: var(--gold); color: var(--ink); letter-spacing: 0.08em; font-size: 11px; font-weight: 500; text-transform: uppercase; padding: 12px 24px; display: inline-block; transition: background 0.2s ease, transform 0.15s ease; }",

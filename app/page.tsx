@@ -40,6 +40,7 @@ const TIER_META: Record<string, { name: string; benefit: string; detail: string 
 
 export default function Home() {
   const [drops, setDrops] = useState<Drop[]>([]);
+  const [notifySubmitted, setNotifySubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   /*
@@ -92,14 +93,14 @@ export default function Home() {
         displayRaisedRef.current = initial;
         setDisplayRaisedMap(initial);
 
-        /* Fetch member counts for all drops in one query */
-        const { data: orderRows } = await supabase
-          .from("orders")
-          .select("drop_id");
+        /* Fetch member counts from the public view (no personal data exposed) */
+        const { data: countRows } = await supabase
+          .from("drop_member_counts")
+          .select("drop_id, member_count");
         const counts: Record<string, number> = {};
         data.forEach((d: Drop) => { counts[d.id] = 0; }); // init all to 0
-        orderRows?.forEach((o: { drop_id: string }) => {
-          counts[o.drop_id] = (counts[o.drop_id] ?? 0) + 1;
+        countRows?.forEach((row: { drop_id: string; member_count: number }) => {
+          counts[row.drop_id] = row.member_count;
         });
         setMemberCountMap(counts);
       }
@@ -197,7 +198,7 @@ export default function Home() {
 
   /* trigger progress animation */
   useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 100);
+    const t = setTimeout(() => setMounted(true), 600);
     return () => clearTimeout(t);
   }, []);
 
@@ -343,7 +344,7 @@ export default function Home() {
         /* CHANGE: Gold progress bar fill — replaces plain black */
         .progress-fill {
           background: linear-gradient(90deg, var(--gold), var(--gold-light));
-          transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: width 1.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         /* CHANGE: Drop card hover — subtle lift + border brightening */
@@ -843,7 +844,7 @@ export default function Home() {
           */}
           <section id="drops" style={{ paddingTop: '72px', paddingBottom: '20px' }}>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+            <div data-reveal style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
               <div>
                 <p style={{ fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500, marginBottom: '8px' }}>
                   Current Drops
@@ -869,39 +870,62 @@ export default function Home() {
             )}
 
             {!loading && drops.length === 0 && (
-              <div style={{ paddingTop: '48px', paddingBottom: '80px', maxWidth: '480px' }}>
-                <div style={{ width: '32px', height: '1px', backgroundColor: 'var(--gold)', marginBottom: '28px' }} />
-                <h3 className="font-display" style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 500, lineHeight: 1.1, letterSpacing: '-0.01em', marginBottom: '16px' }}>
-                  <em style={{ fontStyle: 'italic' }}>Nothing open</em> right now.
+              <div className="grain" style={{
+                backgroundColor: '#FDFAF5', border: '1px solid var(--border)',
+                borderRadius: '4px', padding: 'clamp(40px, 6vw, 72px) clamp(32px, 6vw, 72px)',
+                position: 'relative', overflow: 'hidden',
+                marginBottom: '40px',
+                display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
+              }}>
+                {/* Gold dot — top right */}
+                <div style={{ position: 'absolute', top: '32px', right: '32px', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--gold)', opacity: 0.5 }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
+                  <div style={{ width: '28px', height: '1px', backgroundColor: 'var(--gold)' }} />
+                  <span style={{ fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase' as const, color: 'var(--gold)', fontWeight: 500 }}>
+                    Coming soon
+                  </span>
+                </div>
+
+                <h3 className="font-display" style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.01em', marginBottom: '20px' }}>
+                  The next drop is<br /><em style={{ fontStyle: 'italic' }}>being curated.</em>
                 </h3>
-                <p style={{ fontSize: '15px', fontWeight: 300, lineHeight: 1.8, color: 'var(--ink-muted)', marginBottom: '32px' }}>
-                  Our next drop is being curated. Leave your email and you&apos;ll be the first to know when it goes live.
+
+                <p style={{ fontSize: '15px', fontWeight: 300, lineHeight: 1.8, color: 'var(--ink-muted)', marginBottom: '36px', maxWidth: '440px' }}>
+                  Our team is sourcing the next collective. Leave your email and you&apos;ll be the first to know when it goes live.
                 </p>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const form = e.currentTarget;
-                    const email = (form.elements.namedItem('notify-email') as HTMLInputElement).value;
-                    window.location.href = `mailto:hello@groupdrop.com?subject=${encodeURIComponent('Notify me — Groupdrop')}&body=${encodeURIComponent(`Please notify me when the next drop goes live.\n\nEmail: ${email}`)}`;
-                    form.reset();
-                  }}
-                  style={{ display: 'flex', gap: '0' }}
-                >
-                  <input
-                    name="notify-email"
-                    type="email"
-                    required
-                    placeholder="your@email.com"
-                    style={{ flex: 1, backgroundColor: 'var(--parchment)', border: '1px solid var(--border)', borderRight: 'none', padding: '11px 16px', fontSize: '13px', fontWeight: 300, fontFamily: 'inherit', color: 'var(--ink)', outline: 'none' }}
-                  />
-                  <button type="submit" className="btn-primary" style={{ borderRadius: '0', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-                    Notify me
-                  </button>
-                </form>
+
+                {notifySubmitted ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--gold)', flexShrink: 0 }} />
+                    <p style={{ fontSize: '13px', fontWeight: 400, color: 'var(--ink)', letterSpacing: '0.01em' }}>
+                      You&apos;re on the list. We&apos;ll be in touch.
+                    </p>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setNotifySubmitted(true);
+                    }}
+                    style={{ display: 'flex', gap: '0', width: '100%', maxWidth: '400px' }}
+                  >
+                    <input
+                      name="notify-email"
+                      type="email"
+                      required
+                      placeholder="your@email.com"
+                      style={{ flex: 1, backgroundColor: 'var(--cream)', border: '1px solid var(--border)', borderRight: 'none', padding: '11px 16px', fontSize: '13px', fontWeight: 300, fontFamily: 'inherit', color: 'var(--ink)', outline: 'none' }}
+                    />
+                    <button type="submit" className="btn-primary" style={{ borderRadius: '0', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                      Notify me →
+                    </button>
+                  </form>
+                )}
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            <div data-reveal style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
               {!loading && drops.map((drop) => {
 
                 const raised = drop.raised ?? 0;
@@ -1147,12 +1171,14 @@ export default function Home() {
           */}
           <section id="how" style={{ paddingTop: '72px', paddingBottom: '20px' }}>
 
+            <div data-reveal>
             <p style={{ fontSize: '10px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500, marginBottom: '8px' }}>
               The Process
             </p>
             <h2 className="font-display" style={{ fontSize: '32px', fontWeight: 500, letterSpacing: '-0.01em', marginBottom: '56px' }}>
               How it works
             </h2>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '40px' }}>
 
@@ -1173,7 +1199,7 @@ export default function Home() {
                   body: "Once the target is hit, we authorize payments and ship the goods directly to your door.",
                 },
               ].map((step) => (
-                <div key={step.num} style={{ position: 'relative', paddingTop: '8px' }}>
+                <div data-reveal key={step.num} style={{ position: 'relative', paddingTop: '8px' }}>
 
                   {/*
                     CHANGE: Large Roman numeral as a background decorative element.
