@@ -88,6 +88,16 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   /* CHANGE: Added orders state for order history */
   const [orders, setOrders] = useState<Order[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showConcierge, setShowConcierge] = useState(false);
+  const [conciergeForm, setConciergeForm] = useState({ name: "", email: "", topic: "General Question", message: "" });
+  const [conciergeSent, setConciergeSent] = useState(false);
+
+  const openConcierge = () => {
+    setConciergeSent(false);
+    setConciergeForm({ name: "", email: "", topic: "General Question", message: "" });
+    setShowConcierge(true);
+  };
 
   useEffect(() => {
     async function loadProfile() {
@@ -167,6 +177,91 @@ export default function AccountPage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: SHARED_STYLES }} />
+
+      {/* ── Concierge modal ───────────────────────────────────── */}
+      {showConcierge && (
+        <div onClick={() => setShowConcierge(false)} style={{ position: "fixed", inset: 0, zIndex: 100, backgroundColor: "rgba(26,24,20,0.55)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ backgroundColor: "#FDFAF5", border: "1px solid var(--border)", borderRadius: "4px", padding: "48px 40px", maxWidth: "520px", width: "100%", position: "relative" }}>
+            <div style={{ marginBottom: "28px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+                <div style={{ width: "24px", height: "1px", backgroundColor: "var(--gold)" }} />
+                <span style={{ fontSize: "9px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>Concierge</span>
+              </div>
+              <h3 className="font-display" style={{ fontSize: "28px", fontWeight: 500, fontStyle: "italic" }}>How can we help?</h3>
+            </div>
+            {conciergeSent ? (
+              <div style={{ textAlign: "center", padding: "32px 0" }}>
+                <p className="font-display" style={{ fontSize: "24px", fontWeight: 500, fontStyle: "italic", marginBottom: "12px" }}>Message received.</p>
+                <p style={{ fontSize: "14px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.7 }}>Our concierge team will be in touch within one business day.</p>
+                <button onClick={() => setShowConcierge(false)} style={{ marginTop: "32px", background: "var(--gold)", color: "var(--ink)", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500, padding: "12px 24px", borderRadius: "2px" }}>Close</button>
+              </div>
+            ) : (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const subject = encodeURIComponent(`[Groupdrop Concierge] ${conciergeForm.topic}`);
+                const body = encodeURIComponent(`Name: ${conciergeForm.name}\nEmail: ${conciergeForm.email}\nTopic: ${conciergeForm.topic}\n\n${conciergeForm.message}`);
+                window.location.href = `mailto:hello@groupdrop.com?subject=${subject}&body=${body}`;
+                setConciergeSent(true);
+              }} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Full Name</label>
+                    <input required placeholder="Jane Smith" value={conciergeForm.name} onChange={(e) => setConciergeForm((f) => ({ ...f, name: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Email</label>
+                    <input required type="email" placeholder="jane@example.com" value={conciergeForm.email} onChange={(e) => setConciergeForm((f) => ({ ...f, email: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Topic</label>
+                  <select required value={conciergeForm.topic} onChange={(e) => setConciergeForm((f) => ({ ...f, topic: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", boxSizing: "border-box" as const }}>
+                    {["General Question", "Order Issue", "Membership & Billing", "Shipping & Logistics", "Returns & Replacements", "Other"].map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", display: "block", marginBottom: "6px" }}>Message</label>
+                  <textarea required placeholder="Tell us what's on your mind…" rows={5} value={conciergeForm.message} onChange={(e) => setConciergeForm((f) => ({ ...f, message: e.target.value }))} style={{ width: "100%", background: "var(--cream)", border: "1px solid var(--border)", padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300, color: "var(--ink)", outline: "none", resize: "vertical", boxSizing: "border-box" as const }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                  <button type="button" onClick={() => setShowConcierge(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, fontFamily: "inherit" }}>Cancel</button>
+                  <button type="submit" style={{ background: "var(--gold)", color: "var(--ink)", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500, padding: "12px 24px", borderRadius: "2px" }}>Send message →</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile menu ───────────────────────────────────────── */}
+      {menuOpen && (
+        <div className="mobile-menu md:hidden">
+          <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", marginBottom: "48px" }} />
+          <nav style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "36px" }}>
+            <Link href="/" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              Home
+            </Link>
+            <Link href="/about" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              About
+            </Link>
+            <Link href="/faq" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              FAQ
+            </Link>
+            <Link href="/account" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--gold)", textDecoration: "none", fontStyle: "italic" }}>
+              Account
+            </Link>
+            <button onClick={handleSignOut} className="font-display"
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", background: "none", border: "none", cursor: "pointer", fontStyle: "italic", fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+              Sign out
+            </button>
+          </nav>
+        </div>
+      )}
+
       <main style={{ minHeight: "100vh", backgroundColor: "var(--cream)", color: "var(--ink)" }}>
 
         {/* ── Nav ─────────────────────────────────────────── */}
@@ -191,7 +286,7 @@ export default function AccountPage() {
               </span>
             </Link>
 
-            <nav style={{ display: "flex", gap: "36px", alignItems: "center" }}>
+            <nav style={{ gap: "36px", alignItems: "center" }} className="hidden md:flex">
               <Link href="/#drops" className="nav-link" style={{ textDecoration: "none" }}>Drops</Link>
               <Link href="/about" className="nav-link" style={{ textDecoration: "none" }}>About</Link>
               <Link href="/faq" className="nav-link" style={{ textDecoration: "none" }}>FAQ</Link>
@@ -206,6 +301,17 @@ export default function AccountPage() {
                 Sign out
               </button>
             </nav>
+
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className="flex md:hidden"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", flexDirection: "column", gap: "4.5px", zIndex: 60 }}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+            >
+              <span className={`bar ${menuOpen ? "bar-top-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-mid-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-bot-open" : ""}`} />
+            </button>
           </div>
         </header>
 
@@ -470,11 +576,15 @@ export default function AccountPage() {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {orders.map((order) => {
-                  const statusColor = order.status === "charged" ? "var(--gold)"
+                  const statusColor = order.status === "delivered" ? "var(--gold)"
+                    : order.status === "shipped" ? "#8A7B5A"
+                    : order.status === "confirmed" ? "var(--ink-muted)"
                     : order.status === "cancelled" || order.status === "refunded" ? "#B85450"
                     : "var(--ink-muted)";
-                  const statusLabel = order.status === "pending" ? "Awaiting fulfillment"
-                    : order.status === "charged" ? "Fulfilled"
+                  const statusLabel = order.status === "pending" ? "Awaiting confirmation"
+                    : order.status === "confirmed" ? "Confirmed"
+                    : order.status === "shipped" ? "Shipped"
+                    : order.status === "delivered" ? "Delivered"
                     : order.status === "cancelled" ? "Cancelled"
                     : order.status === "refunded" ? "Refunded"
                     : order.status;
@@ -552,7 +662,7 @@ export default function AccountPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "28px", flexWrap: "wrap" }}>
                 <Link href="/about" className="nav-link" style={{ textDecoration: "none" }}>About</Link>
                 <Link href="/faq" className="nav-link" style={{ textDecoration: "none" }}>FAQ</Link>
-                <a href="mailto:hello@groupdrop.com" className="nav-link" style={{ textDecoration: "none" }}>Concierge</a>
+                <button onClick={openConcierge} className="nav-link" style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>Concierge</button>
               </div>
               <span style={{ fontSize: "10px", letterSpacing: "0.12em", color: "var(--ink-muted)", fontWeight: 300 }}>
                 &copy; {new Date().getFullYear()} groupdrop. All rights reserved.
@@ -615,4 +725,10 @@ const SHARED_STYLES = [
   ".delay-3 { animation-delay: 0.4s; }",
   ".gold-rule { border: none; border-top: 1px solid var(--gold); opacity: 0.35; margin: 0; }",
   ".status-badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; font-family: 'Jost', sans-serif; }",
+  ".bar { display: block; width: 22px; height: 1.5px; background: var(--ink); transition: transform 0.25s ease, opacity 0.25s ease; }",
+  ".bar-top-open { transform: translateY(5px) rotate(45deg); }",
+  ".bar-mid-open { opacity: 0; }",
+  ".bar-bot-open { transform: translateY(-5px) rotate(-45deg); }",
+  ".mobile-menu { position: fixed; inset: 0; z-index: 55; background: var(--cream); display: flex; flex-direction: column; align-items: center; justify-content: center; animation: menuFadeIn 0.2s ease forwards; }",
+  "@keyframes menuFadeIn { from { opacity: 0 } to { opacity: 1 } }",
 ].join("\n");

@@ -134,6 +134,9 @@ export default function DropPage({
   /* Member count — number of orders placed for this drop */
   const [memberCount, setMemberCount] = useState<number | null>(null);
 
+  /* Waitlist */
+  const [waitlistStatus, setWaitlistStatus] = useState<"idle" | "loading" | "joined">("idle");
+
   /* Success modal — shown after joining a drop */
   const [successTotal, setSuccessTotal] = useState<number | null>(null);
 
@@ -205,6 +208,15 @@ export default function DropPage({
           .eq("id", user.id)
           .single();
         if (data) setProfile(data as Profile);
+
+        /* Check if user is already on the waitlist for this drop */
+        const { data: waitlistRow } = await supabase
+          .from("waitlist")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("drop_slug", slug)
+          .maybeSingle();
+        if (waitlistRow) setWaitlistStatus("joined");
       }
       setAuthChecked(true);
     }
@@ -424,6 +436,24 @@ export default function DropPage({
     }
 
     setSuccessTotal(cartTotal);
+  }
+
+  async function handleWaitlist() {
+    if (!drop) return;
+    setWaitlistStatus("loading");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setWaitlistStatus("idle"); return; }
+
+    await supabase.from("waitlist").insert({
+      user_id: user.id,
+      user_email: user.email,
+      user_name: profile?.full_name ?? null,
+      drop_id: drop.id,
+      drop_slug: drop.slug,
+      drop_name: drop.name,
+    });
+
+    setWaitlistStatus("joined");
   }
 
   /* ── Loading / error states ───────────────────────────────── */
@@ -899,6 +929,71 @@ export default function DropPage({
 
             {/* ── Cart / Aside ──────────────────────────────────── */}
             <aside id="cart" style={{ position: "sticky", top: "88px", height: "fit-content" }}>
+            {reachedTarget ? (
+              /* ── Waitlist card — shown when drop is fully funded ── */
+              <div className="grain" style={{
+                backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
+                borderRadius: "4px", padding: "32px", position: "relative", overflow: "hidden",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                  <div style={{ width: "12px", height: "1px", backgroundColor: "var(--gold)" }} />
+                  <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                    Drop funded
+                  </span>
+                </div>
+
+                <h3 className="font-display" style={{ fontSize: "26px", fontWeight: 500, letterSpacing: "-0.01em", marginBottom: "12px" }}>
+                  <em style={{ fontStyle: "italic" }}>This drop has closed.</em>
+                </h3>
+
+                <p style={{ fontSize: "13px", fontWeight: 300, lineHeight: 1.75, color: "var(--ink-muted)", marginBottom: "28px" }}>
+                  The collective target was reached. Join the waitlist and we&apos;ll notify you when the next {drop.name} drop opens.
+                </p>
+
+                <hr className="gold-rule" style={{ marginBottom: "24px" }} />
+
+                {!authChecked ? null : !profile ? (
+                  <div>
+                    <p style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)", marginBottom: "16px", lineHeight: 1.7 }}>
+                      Sign in to join the waitlist.
+                    </p>
+                    <Link
+                      href={`/login?redirect=/drops/${slug}`}
+                      className="btn-primary"
+                      style={{ borderRadius: "2px", textDecoration: "none", display: "block", textAlign: "center" }}
+                    >
+                      Sign in →
+                    </Link>
+                  </div>
+                ) : waitlistStatus === "joined" ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <div style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "var(--gold)", flexShrink: 0 }} />
+                    <p style={{ fontSize: "13px", fontWeight: 400, color: "var(--ink)" }}>
+                      You&apos;re on the waitlist. We&apos;ll be in touch.
+                    </p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleWaitlist}
+                    disabled={waitlistStatus === "loading"}
+                    className={waitlistStatus === "loading" ? "" : "btn-primary"}
+                    style={{
+                      width: "100%", borderRadius: "2px", border: "none",
+                      cursor: waitlistStatus === "loading" ? "not-allowed" : "pointer",
+                      fontFamily: "inherit",
+                      ...(waitlistStatus === "loading" ? {
+                        backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
+                        fontSize: "11px", letterSpacing: "0.08em",
+                        textTransform: "uppercase" as const, fontWeight: 500, padding: "14px 24px",
+                      } : {}),
+                    }}
+                  >
+                    {waitlistStatus === "loading" ? "Joining…" : "Join the waitlist →"}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
               <div className="grain" style={{
                 backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
                 borderRadius: "4px", padding: "32px", position: "relative", overflow: "hidden",
@@ -1026,7 +1121,7 @@ export default function DropPage({
                 )}
               </div>
               {/* Tier upgrade nudge — shown to essentialist and enthusiast members */}
-              {(profile?.tier === "essentialist" || profile?.tier === "enthusiast") && (
+              {!reachedTarget && (profile?.tier === "essentialist" || profile?.tier === "enthusiast") && (
                 <div style={{
                   marginTop: "16px",
                   borderLeft: "2px solid var(--gold)",
@@ -1047,6 +1142,8 @@ export default function DropPage({
                   </a>
                 </div>
               )}
+            </>
+            )} {/* end reachedTarget ternary */}
             </aside>
 
           </div>
@@ -1089,43 +1186,80 @@ export default function DropPage({
         padding: "16px 24px",
         alignItems: "center", justifyContent: "space-between", gap: "16px",
       }}>
-        <div>
-          <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "3px" }}>
-            {cartItems.length === 0 ? "Your cart" : `${cartItems.reduce((s, x) => s + x.qty, 0)} item${cartItems.reduce((s, x) => s + x.qty, 0) === 1 ? "" : "s"}`}
-          </p>
-          <span className="font-display" style={{ fontSize: "24px", fontWeight: 500, lineHeight: 1 }}>
-            {moneyFromCents(cartTotal)}
-          </span>
-        </div>
-        {authChecked && !profile ? (
-          <Link
-            href={`/login?redirect=/drops/${slug}`}
-            className="btn-primary"
-            style={{ borderRadius: "2px", textDecoration: "none", flexShrink: 0 }}
-          >
-            Sign in to join →
-          </Link>
+        {reachedTarget ? (
+          /* ── Waitlist state ── */
+          <>
+            <div>
+              <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "3px" }}>
+                Drop funded
+              </p>
+              <span className="font-display" style={{ fontSize: "20px", fontWeight: 500, lineHeight: 1 }}>
+                {waitlistStatus === "joined" ? "You're on the list." : "Join the waitlist."}
+              </span>
+            </div>
+            {authChecked && !profile ? (
+              <Link
+                href={`/login?redirect=/drops/${slug}`}
+                className="btn-primary"
+                style={{ borderRadius: "2px", textDecoration: "none", flexShrink: 0 }}
+              >
+                Sign in →
+              </Link>
+            ) : waitlistStatus === "joined" ? (
+              <span style={{
+                fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase",
+                fontWeight: 500, color: "var(--gold)", flexShrink: 0,
+              }}>
+                ✓ Waitlisted
+              </span>
+            ) : (
+              <button
+                onClick={handleWaitlist}
+                disabled={waitlistStatus === "loading"}
+                className={waitlistStatus === "loading" ? "" : "btn-primary"}
+                style={{
+                  borderRadius: "2px", border: "none", fontFamily: "inherit", flexShrink: 0,
+                  cursor: waitlistStatus === "loading" ? "not-allowed" : "pointer",
+                  ...(waitlistStatus === "loading" ? {
+                    backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
+                    fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                    fontWeight: 500, padding: "12px 20px",
+                  } : {}),
+                }}
+              >
+                {waitlistStatus === "loading" ? "Joining…" : "Join waitlist →"}
+              </button>
+            )}
+          </>
         ) : (
-          <button
-            onClick={handleJoin}
-            disabled={reachedTarget}
-            className={reachedTarget ? "" : "btn-primary"}
-            style={{
-              borderRadius: "2px", border: "none", cursor: reachedTarget ? "not-allowed" : "pointer",
-              fontFamily: "inherit", flexShrink: 0,
-              ...(reachedTarget ? {
-                backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
-                fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" as const,
-                fontWeight: 500, padding: "12px 20px",
-              } : {}),
-            }}
-          >
-            {reachedTarget
-              ? "Target reached"
-              : cartTotal <= 0
-              ? "Add items →"
-              : `Authorize ${moneyFromCents(cartTotal)} →`}
-          </button>
+          /* ── Normal cart state ── */
+          <>
+            <div>
+              <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "3px" }}>
+                {cartItems.length === 0 ? "Your cart" : `${cartItems.reduce((s, x) => s + x.qty, 0)} item${cartItems.reduce((s, x) => s + x.qty, 0) === 1 ? "" : "s"}`}
+              </p>
+              <span className="font-display" style={{ fontSize: "24px", fontWeight: 500, lineHeight: 1 }}>
+                {moneyFromCents(cartTotal)}
+              </span>
+            </div>
+            {authChecked && !profile ? (
+              <Link
+                href={`/login?redirect=/drops/${slug}`}
+                className="btn-primary"
+                style={{ borderRadius: "2px", textDecoration: "none", flexShrink: 0 }}
+              >
+                Sign in to join →
+              </Link>
+            ) : (
+              <button
+                onClick={handleJoin}
+                className="btn-primary"
+                style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+              >
+                {cartTotal <= 0 ? "Add items →" : `Authorize ${moneyFromCents(cartTotal)} →`}
+              </button>
+            )}
+          </>
         )}
       </div>
 

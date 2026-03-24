@@ -191,9 +191,10 @@ export default function AboutPage() {
           </Link>
 
           {/* Desktop nav */}
-          <nav style={{ display: "flex", gap: "36px", alignItems: "center" }} className="hidden md:flex">
+          <nav style={{ gap: "36px", alignItems: "center" }} className="hidden md:flex">
             <Link href="/" className="nav-link">Drops</Link>
             <Link href="/about" className="nav-link" style={{ color: "var(--gold)" }}>About</Link>
+            <Link href="/faq" className="nav-link">FAQ</Link>
             {user ? (
               <>
                 <Link href="/account" className="nav-link" style={{ textDecoration: "none" }}>Account</Link>
@@ -225,7 +226,7 @@ export default function AboutPage() {
       </header>
 
       {/* Page content */}
-      <main style={{ maxWidth: "720px", margin: "0 auto", padding: "0 28px 120px" }}>
+      <main style={{ maxWidth: "720px", margin: "0 auto", padding: "0 28px" }}>
 
         {/* ── Hero ─────────────────────────────────────────── */}
         <section style={{ paddingTop: "100px", paddingBottom: "72px" }}>
@@ -464,8 +465,11 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <hr style={{ border: "none", borderTop: "1px solid var(--gold)", opacity: 0.35, margin: "80px 0 0" }} />
-        <footer style={{ padding: "28px 0 40px", maxWidth: "1100px", margin: "0 auto" }}>
+      </main>
+
+      <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 28px" }}>
+        <hr className="gold-rule" />
+        <footer style={{ padding: "28px 0 40px" }}>
           <div style={{
             display: "flex", justifyContent: "space-between",
             alignItems: "center", flexWrap: "wrap", gap: "16px",
@@ -486,7 +490,7 @@ export default function AboutPage() {
             <Link href="/cookies" style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 300, textDecoration: "none" }}>Cookie Policy</Link>
           </div>
         </footer>
-      </main>
+      </div>
 
     </div>
   );

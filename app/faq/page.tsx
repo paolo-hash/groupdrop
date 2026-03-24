@@ -265,7 +265,7 @@ export default function FaqPage() {
             <span style={{ fontSize: "8px", letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 500, color: "var(--gold)", border: "1px solid var(--gold)", padding: "2px 6px", opacity: 0.8 }}>beta</span>
           </Link>
 
-          <nav style={{ display: "flex", gap: "36px", alignItems: "center" }} className="hidden md:flex">
+          <nav style={{ gap: "36px", alignItems: "center" }} className="hidden md:flex">
             <Link href="/" className="nav-link">Drops</Link>
             <Link href="/about" className="nav-link">About</Link>
             <Link href="/faq" className="nav-link" style={{ color: "var(--gold)" }}>FAQ</Link>

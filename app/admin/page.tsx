@@ -44,7 +44,28 @@ type Drop = {
   target?: number | null;
 };
 
+type WaitlistEntry = {
+  id: string;
+  user_email: string;
+  user_name: string | null;
+  drop_slug: string;
+  drop_name: string;
+  created_at: string;
+};
+
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+
+const STATUS_FLOW = ["pending", "confirmed", "shipped", "delivered"] as const;
+type OrderStatus = typeof STATUS_FLOW[number];
+
+function statusColor(status: string): { bg: string; color: string } {
+  switch (status) {
+    case "confirmed": return { bg: "#EAE4D8", color: "#6B6560" };
+    case "shipped":   return { bg: "#D4C9A8", color: "#3D3830" };
+    case "delivered": return { bg: "var(--gold)", color: "var(--ink)" };
+    default:          return { bg: "var(--parchment)", color: "var(--ink-muted)" };
+  }
+}
 
 function money(cents: number) {
   return "$" + (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -76,8 +97,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [drops, setDrops] = useState<Drop[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("all");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"orders" | "waitlist">("orders");
 
   useEffect(() => {
     async function init() {
@@ -95,18 +118,25 @@ export default function AdminPage() {
 
       setAuthorized(true);
 
-      const [{ data: ordersData }, { data: dropsData }] = await Promise.all([
+      const [{ data: ordersData }, { data: dropsData }, { data: waitlistData }] = await Promise.all([
         supabase.from("orders").select("*").order("created_at", { ascending: false }),
         supabase.from("drops").select("*").order("created_at", { ascending: false }),
+        supabase.from("waitlist").select("*").order("created_at", { ascending: false }),
       ]);
 
       setOrders((ordersData ?? []) as Order[]);
       setDrops((dropsData ?? []) as Drop[]);
+      setWaitlist((waitlistData ?? []) as WaitlistEntry[]);
       setLoading(false);
     }
 
     init();
   }, [router]);
+
+  async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
+    await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
+    setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: newStatus } : o));
+  }
 
   if (!authorized || loading) {
     return (
@@ -196,6 +226,7 @@ export default function AdminPage() {
                 { label: "Total orders", value: String(orders.length) },
                 { label: "Total authorized", value: money(allAuthorized) },
                 { label: "Unique members", value: String(new Set(orders.map((o) => o.user_email)).size) },
+                { label: "Waitlisted", value: String(waitlist.length) },
                 { label: "Active drops", value: String(drops.length) },
               ].map(({ label, value }) => (
                 <div key={label} className="grain" style={{
@@ -216,8 +247,116 @@ export default function AdminPage() {
 
           <hr className="gold-rule" />
 
-          {/* ── Drop filter tabs ───────────────────────────────── */}
+          {/* ── View tabs ─────────────────────────────────────── */}
           <section style={{ paddingTop: "40px", paddingBottom: "0" }}>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "32px", borderBottom: "1px solid var(--border)", paddingBottom: "0" }}>
+              {(["orders", "waitlist"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  style={{
+                    fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase",
+                    fontWeight: 500, fontFamily: "inherit", cursor: "pointer", background: "none",
+                    border: "none", padding: "10px 4px",
+                    borderBottom: activeTab === tab ? "2px solid var(--gold)" : "2px solid transparent",
+                    color: activeTab === tab ? "var(--ink)" : "var(--ink-muted)",
+                    marginBottom: "-1px",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {tab === "orders" ? `Orders (${orders.length})` : `Waitlist (${waitlist.length})`}
+                </button>
+              ))}
+            </div>
+
+          {/* ── Waitlist view ─────────────────────────────────── */}
+          {activeTab === "waitlist" && (
+            <>
+              {/* Drop filter for waitlist */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "24px" }}>
+                {[{ slug: "all", label: `All drops (${waitlist.length})` }, ...drops.map((d) => ({
+                  slug: d.slug,
+                  label: `${dropDisplayName(d)} (${waitlist.filter((w) => w.drop_slug === d.slug).length})`,
+                }))].map(({ slug, label }) => (
+                  <button
+                    key={slug}
+                    onClick={() => setSelectedSlug(slug)}
+                    style={{
+                      fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase",
+                      fontWeight: 500, fontFamily: "inherit", cursor: "pointer",
+                      padding: "8px 16px", borderRadius: "2px", border: "1px solid",
+                      transition: "all 0.15s ease",
+                      backgroundColor: selectedSlug === slug ? "var(--gold)" : "transparent",
+                      color: selectedSlug === slug ? "var(--ink)" : "var(--ink-muted)",
+                      borderColor: selectedSlug === slug ? "var(--gold)" : "var(--border)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {(() => {
+                const filtered = selectedSlug === "all" ? waitlist : waitlist.filter((w) => w.drop_slug === selectedSlug);
+                if (filtered.length === 0) return (
+                  <div style={{
+                    border: "1px dashed var(--gold)", borderRadius: "2px",
+                    backgroundColor: "var(--parchment)", padding: "40px", textAlign: "center",
+                    marginBottom: "80px",
+                  }}>
+                    <p style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)" }}>
+                      No waitlist entries yet.
+                    </p>
+                  </div>
+                );
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1px", marginBottom: "80px" }}>
+                    <div style={{
+                      display: "grid", gridTemplateColumns: "140px 1fr 1fr",
+                      gap: "16px", padding: "10px 20px",
+                      backgroundColor: "var(--parchment)", borderRadius: "2px",
+                    }}>
+                      {["Joined", "Member", "Drop"].map((h) => (
+                        <span key={h} style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                    {filtered.map((entry) => (
+                      <div key={entry.id} style={{
+                        display: "grid", gridTemplateColumns: "140px 1fr 1fr",
+                        gap: "16px", padding: "16px 20px",
+                        backgroundColor: "#FDFAF5",
+                        border: "1px solid var(--border)", borderRadius: "2px",
+                      }}>
+                        <span style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", alignSelf: "center" }}>
+                          {formatDate(entry.created_at)}
+                        </span>
+                        <div style={{ alignSelf: "center", minWidth: 0 }}>
+                          {entry.user_name && (
+                            <p style={{ fontSize: "13px", fontWeight: 500, marginBottom: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {entry.user_name}
+                            </p>
+                          )}
+                          <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {entry.user_email}
+                          </p>
+                        </div>
+                        <span style={{ fontSize: "12px", fontWeight: 400, alignSelf: "center", color: "var(--ink-muted)" }}>
+                          {entry.drop_name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+
+          {/* ── Orders view ───────────────────────────────────── */}
+          {activeTab === "orders" && (
+            <>
+          {/* ── Drop filter tabs ───────────────────────────────── */}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "32px" }}>
               {[{ slug: "all", label: `All drops (${orders.length})` }, ...drops.map((d) => ({
                 slug: d.slug,
@@ -366,8 +505,7 @@ export default function AdminPage() {
                         <span style={{
                           fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase",
                           fontWeight: 500, padding: "3px 8px", borderRadius: "2px",
-                          backgroundColor: order.status === "completed" ? "var(--gold)" : "var(--parchment)",
-                          color: order.status === "completed" ? "var(--ink)" : "var(--ink-muted)",
+                          ...statusColor(order.status),
                         }}>
                           {order.status}
                         </span>
@@ -379,28 +517,85 @@ export default function AdminPage() {
                       <div style={{
                         backgroundColor: "var(--parchment)",
                         border: "1px solid var(--border)", borderTop: "none",
-                        borderRadius: "0 0 2px 2px", padding: "16px 20px",
+                        borderRadius: "0 0 2px 2px", padding: "20px",
                       }}>
-                        <p style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", marginBottom: "12px" }}>
-                          Order items
-                        </p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          {order.items.map((item, i) => (
-                            <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink)" }}>
-                                {item.qty}× {item.name}
-                              </span>
-                              <span className="font-display" style={{ fontSize: "16px", fontWeight: 500 }}>
-                                {money(item.line_total_cents)}
-                              </span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "24px", flexWrap: "wrap" }}>
+
+                          {/* Items list */}
+                          <div style={{ flex: 1, minWidth: "200px" }}>
+                            <p style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", marginBottom: "12px" }}>
+                              Order items
+                            </p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                              {order.items.map((item, i) => (
+                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <span style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink)" }}>
+                                    {item.qty}× {item.name}
+                                  </span>
+                                  <span className="font-display" style={{ fontSize: "16px", fontWeight: 500 }}>
+                                    {money(item.line_total_cents)}
+                                  </span>
+                                </div>
+                              ))}
+                              <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                                <span style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>Total</span>
+                                <span className="font-display" style={{ fontSize: "20px", fontWeight: 500 }}>
+                                  {money(order.total_cents)}
+                                </span>
+                              </div>
                             </div>
-                          ))}
-                          <div style={{ borderTop: "1px solid var(--border)", paddingTop: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
-                            <span style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>Total</span>
-                            <span className="font-display" style={{ fontSize: "20px", fontWeight: 500 }}>
-                              {money(order.total_cents)}
-                            </span>
                           </div>
+
+                          {/* Status updater */}
+                          <div style={{ minWidth: "200px" }}>
+                            <p style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", marginBottom: "12px" }}>
+                              Update status
+                            </p>
+                            {/* Progress steps */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "16px" }}>
+                              {STATUS_FLOW.map((s, i) => {
+                                const currentIdx = STATUS_FLOW.indexOf(order.status as OrderStatus);
+                                const isPast = i <= currentIdx;
+                                return (
+                                  <div key={s} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <div style={{
+                                      width: "8px", height: "8px", borderRadius: "50%",
+                                      backgroundColor: isPast ? "var(--gold)" : "var(--border)",
+                                      flexShrink: 0,
+                                    }} />
+                                    {i < STATUS_FLOW.length - 1 && (
+                                      <div style={{ width: "16px", height: "1px", backgroundColor: isPast && i < currentIdx ? "var(--gold)" : "var(--border)" }} />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                              {STATUS_FLOW.map((s) => {
+                                const isCurrent = order.status === s;
+                                return (
+                                  <button
+                                    key={s}
+                                    onClick={(e) => { e.stopPropagation(); updateOrderStatus(order.id, s); }}
+                                    disabled={isCurrent}
+                                    style={{
+                                      fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase",
+                                      fontWeight: 500, fontFamily: "inherit", cursor: isCurrent ? "default" : "pointer",
+                                      padding: "5px 10px", borderRadius: "2px", border: "1px solid",
+                                      transition: "all 0.15s ease",
+                                      ...( isCurrent
+                                        ? { ...statusColor(s), borderColor: "transparent" }
+                                        : { backgroundColor: "transparent", color: "var(--ink-muted)", borderColor: "var(--border)" }
+                                      ),
+                                    }}
+                                  >
+                                    {s}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
                         </div>
                       </div>
                     )}
@@ -408,6 +603,8 @@ export default function AdminPage() {
                 ))}
               </div>
             )}
+            </>
+          )}
           </section>
 
         </div>
