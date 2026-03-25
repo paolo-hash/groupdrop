@@ -128,6 +128,7 @@ export default function DropPage({
   /* CHANGE: Added profile state to track tier and drops used this month */
   const [profile, setProfile] = useState<Profile | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   /* CHANGE: tick state for live countdown */
   const [tick, setTick] = useState(0);
 
@@ -590,6 +591,46 @@ export default function DropPage({
 
       <main style={{ minHeight: "100vh", backgroundColor: "var(--cream)", color: "var(--ink)" }}>
 
+        {/* ── Mobile menu ───────────────────────────────────── */}
+        {menuOpen && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 55, background: "var(--cream)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", animation: "menuFadeIn 0.2s ease forwards" }}>
+            <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", marginBottom: "48px" }} />
+            <nav style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "36px" }}>
+              <Link href="/" className="font-display" onClick={() => setMenuOpen(false)}
+                style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+                Home
+              </Link>
+              <Link href="/about" className="font-display" onClick={() => setMenuOpen(false)}
+                style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+                About
+              </Link>
+              <Link href="/faq" className="font-display" onClick={() => setMenuOpen(false)}
+                style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+                FAQ
+              </Link>
+              {profile ? (
+                <>
+                  <Link href="/account" className="font-display" onClick={() => setMenuOpen(false)}
+                    style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+                    Account
+                  </Link>
+                  <button onClick={async () => { setMenuOpen(false); await supabase.auth.signOut(); window.location.href = "/"; }}
+                    className="font-display"
+                    style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink-muted)", background: "none", border: "none", cursor: "pointer", fontStyle: "italic", fontFamily: "'Cormorant Garamond', Georgia, serif" }}>
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <Link href={`/login?redirect=/drops/${slug}`} className="font-display" onClick={() => setMenuOpen(false)}
+                  style={{ fontSize: "36px", fontWeight: 500, color: "var(--gold)", textDecoration: "none", fontStyle: "italic" }}>
+                  Sign in
+                </Link>
+              )}
+            </nav>
+            <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", marginTop: "48px" }} />
+          </div>
+        )}
+
         {/* ── Nav ───────────────────────────────────────────── */}
         <header style={{
           borderBottom: "1px solid var(--border)",
@@ -621,21 +662,14 @@ export default function DropPage({
               </span>
             </Link>
 
-            {/* CHANGE: Auth-aware nav — shows Account + Sign out when logged in */}
-            <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
-              <Link href="/#drops" className="nav-link" style={{ textDecoration: "none" }}>
-                ← All drops
-              </Link>
+            {/* Desktop nav */}
+            <nav style={{ gap: "32px", alignItems: "center" }} className="hidden md:flex">
+              <Link href="/#drops" className="nav-link" style={{ textDecoration: "none" }}>← All drops</Link>
               {profile ? (
                 <>
-                  <Link href="/account" className="nav-link" style={{ textDecoration: "none" }}>
-                    Account
-                  </Link>
-                  <button
-                    onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
-                    className="nav-link"
-                    style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}
-                  >
+                  <Link href="/account" className="nav-link" style={{ textDecoration: "none" }}>Account</Link>
+                  <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
+                    className="nav-link" style={{ background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", padding: 0 }}>
                     Sign out
                   </button>
                 </>
@@ -644,7 +678,16 @@ export default function DropPage({
                   Sign in →
                 </Link>
               )}
-            </div>
+            </nav>
+
+            {/* Hamburger — mobile only */}
+            <button onClick={() => setMenuOpen((o) => !o)} className="flex md:hidden"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", flexDirection: "column", gap: "4.5px", zIndex: 60 }}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}>
+              <span className={`bar ${menuOpen ? "bar-top-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-mid-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-bot-open" : ""}`} />
+            </button>
           </div>
         </header>
 

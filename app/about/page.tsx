@@ -143,6 +143,10 @@ export default function AboutPage() {
               style={{ fontSize: "36px", fontWeight: 500, color: "var(--gold)", textDecoration: "none", fontStyle: "italic" }}>
               About
             </Link>
+            <Link href="/faq" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              FAQ
+            </Link>
             {user ? (
               <>
                 <Link href="/account" className="font-display" onClick={() => setMenuOpen(false)}
