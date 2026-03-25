@@ -491,4 +491,9 @@ const SHARED_STYLES = [
   ".delay-2 { animation-delay: 0.25s; }",
   ".delay-3 { animation-delay: 0.4s; }",
   ".gold-rule { border: none; border-top: 1px solid var(--gold); opacity: 0.35; margin: 0; }",
+  ".bar { display: block; width: 22px; height: 1.5px; background: var(--ink); transition: transform 0.25s ease, opacity 0.25s ease; }",
+  ".bar-top-open { transform: translateY(5px) rotate(45deg); }",
+  ".bar-mid-open { opacity: 0; }",
+  ".bar-bot-open { transform: translateY(-5px) rotate(-45deg); }",
+  "@keyframes menuFadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }",
 ].join("\n");
