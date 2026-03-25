@@ -18,7 +18,16 @@ export default function PageTransition({ children }: { children: React.ReactNode
   }, [pathname]);
 
   return (
-    <div ref={ref} className="page-transition">
+    <div
+      ref={ref}
+      className="page-transition"
+      onAnimationEnd={() => {
+        // Remove the class once the animation finishes so the element no longer
+        // has a transform applied via fill-forward — a lingering transform creates
+        // a stacking context that breaks position:fixed children (mobile menus, modals)
+        ref.current?.classList.remove("page-transition");
+      }}
+    >
       {children}
     </div>
   );

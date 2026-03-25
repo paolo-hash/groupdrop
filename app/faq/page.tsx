@@ -296,14 +296,14 @@ export default function FaqPage() {
 
         {/* Hero */}
         <section style={{ paddingTop: "100px", paddingBottom: "64px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
+          <div className="animate-fade-up" style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "20px" }}>
             <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)" }} />
             <span style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>Support</span>
           </div>
-          <h1 className="font-display" style={{ fontSize: "clamp(44px, 6vw, 68px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.01em", marginBottom: "20px" }}>
+          <h1 className="font-display animate-fade-up delay-1" style={{ fontSize: "clamp(44px, 6vw, 68px)", fontWeight: 500, lineHeight: 1.05, letterSpacing: "-0.01em", marginBottom: "20px" }}>
             Frequently asked<br /><em style={{ fontStyle: "italic" }}>questions.</em>
           </h1>
-          <p style={{ fontSize: "16px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.75, maxWidth: "480px" }}>
+          <p className="animate-fade-up delay-2" style={{ fontSize: "16px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.75, maxWidth: "480px" }}>
             Everything you need to know about how Groupdrop works. Can&apos;t find your answer?{" "}
             <button onClick={openConcierge} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "var(--gold)", fontFamily: "inherit", fontSize: "inherit", fontWeight: 400, textDecoration: "underline", textUnderlineOffset: "3px" }}>
               Contact our concierge.
@@ -314,7 +314,7 @@ export default function FaqPage() {
         <hr className="gold-rule" />
 
         {/* FAQ accordion */}
-        <div style={{ paddingTop: "64px" }}>
+        <div data-reveal style={{ paddingTop: "64px" }}>
           {FAQ_SECTIONS.map((section, si) => (
             <div key={si} style={{ marginBottom: "52px" }}>
               <p style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", fontWeight: 500, color: "var(--gold)", marginBottom: "8px" }}>
@@ -342,7 +342,7 @@ export default function FaqPage() {
         </div>
 
         {/* Concierge CTA */}
-        <div style={{ marginTop: "24px", padding: "40px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "24px", backgroundColor: "#FDFAF5" }}>
+        <div data-reveal style={{ marginTop: "24px", padding: "40px", border: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "24px", backgroundColor: "#FDFAF5" }}>
           <div>
             <p className="font-display" style={{ fontSize: "24px", fontWeight: 500, fontStyle: "italic", marginBottom: "8px" }}>Still have questions?</p>
             <p style={{ fontSize: "14px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.6 }}>Our concierge team typically responds within one business day.</p>

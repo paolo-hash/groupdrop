@@ -93,10 +93,8 @@ export default function Home() {
         displayRaisedRef.current = initial;
         setDisplayRaisedMap(initial);
 
-        /* Fetch member counts from the public view (no personal data exposed) */
-        const { data: countRows } = await supabase
-          .from("drop_member_counts")
-          .select("drop_id, member_count");
+        /* Fetch member counts via security definer function (bypasses RLS) */
+        const { data: countRows } = await supabase.rpc("drop_member_counts");
         const counts: Record<string, number> = {};
         data.forEach((d: Drop) => { counts[d.id] = 0; }); // init all to 0
         countRows?.forEach((row: { drop_id: string; member_count: number }) => {
