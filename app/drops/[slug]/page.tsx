@@ -487,6 +487,7 @@ export default function DropPage({
   }
 
   const reachedTarget = drop.raisedCents >= drop.targetCents;
+  const isClosed = !reachedTarget && drop.closesAt !== null && new Date(drop.closesAt) < new Date();
 
   /* ── Render ───────────────────────────────────────────────── */
   return (
@@ -715,10 +716,10 @@ export default function DropPage({
               }}>
                 <span style={{
                   width: "5px", height: "5px", borderRadius: "50%",
-                  backgroundColor: reachedTarget ? "var(--gold)" : "var(--ink-muted)",
-                  display: "inline-block", opacity: reachedTarget ? 1 : 0.5,
+                  backgroundColor: reachedTarget ? "var(--gold)" : isClosed ? "#B85450" : "var(--ink-muted)",
+                  display: "inline-block", opacity: 1,
                 }} />
-                {reachedTarget ? "Completed" : "Active Drop"}
+                {reachedTarget ? "Funded" : isClosed ? "Did not fund" : "Active Drop"}
               </span>
 
               {/* Early access badge — Curator tier only */}
@@ -985,7 +986,30 @@ export default function DropPage({
 
             {/* ── Cart / Aside ──────────────────────────────────── */}
             <aside id="cart" style={{ position: "sticky", top: "88px", height: "fit-content" }}>
-            {reachedTarget ? (
+            {isClosed ? (
+              /* ── Did not fund card ── */
+              <div className="grain" style={{
+                backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
+                borderRadius: "4px", padding: "32px", position: "relative", overflow: "hidden",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+                  <div style={{ width: "12px", height: "1px", backgroundColor: "#B85450" }} />
+                  <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#B85450", fontWeight: 500 }}>
+                    Drop closed
+                  </span>
+                </div>
+                <h3 className="font-display" style={{ fontSize: "26px", fontWeight: 500, letterSpacing: "-0.01em", marginBottom: "12px" }}>
+                  <em style={{ fontStyle: "italic" }}>This drop did not fund.</em>
+                </h3>
+                <p style={{ fontSize: "13px", fontWeight: 300, lineHeight: 1.75, color: "var(--ink-muted)", marginBottom: "24px" }}>
+                  The collective target wasn&apos;t reached in time. No charges were made. Join the notify list and we&apos;ll let you know when the next {drop.name} drop opens.
+                </p>
+                <hr className="gold-rule" style={{ marginBottom: "24px" }} />
+                <Link href="/" className="btn-primary" style={{ display: "block", textAlign: "center", borderRadius: "2px", textDecoration: "none" }}>
+                  Browse other drops →
+                </Link>
+              </div>
+            ) : reachedTarget ? (
               /* ── Waitlist card — shown when drop is fully funded ── */
               <div className="grain" style={{
                 backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
@@ -1075,13 +1099,15 @@ export default function DropPage({
 
                 <div style={{ marginBottom: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
                   {cartItems.length === 0 ? (
-                    <div style={{
-                      border: "1px dashed var(--gold)", borderRadius: "2px",
-                      backgroundColor: "var(--parchment)", padding: "20px", textAlign: "center",
-                    }}>
-                      <p style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", letterSpacing: "0.02em" }}>
-                        Add items to see your cart total.
+                    <div style={{ padding: "24px 0 8px", textAlign: "center" }}>
+                      <div style={{ width: "28px", height: "1px", backgroundColor: "var(--gold)", margin: "0 auto 20px", opacity: 0.5 }} />
+                      <p className="font-display" style={{ fontSize: "18px", fontWeight: 500, fontStyle: "italic", color: "var(--ink)", marginBottom: "8px" }}>
+                        Nothing selected yet.
                       </p>
+                      <p style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.7, letterSpacing: "0.01em" }}>
+                        Choose your items below<br />to reserve your allocation.
+                      </p>
+                      <div style={{ marginTop: "20px", fontSize: "18px", color: "var(--gold)", opacity: 0.6 }}>↓</div>
                     </div>
                   ) : (
                     cartItems.map(({ sku, qty, lineTotal }) => (
@@ -1199,7 +1225,7 @@ export default function DropPage({
                 </div>
               )}
             </>
-            )} {/* end reachedTarget ternary */}
+            )} {/* end reachedTarget / isClosed ternary */}
             </aside>
 
           </div>
@@ -1242,7 +1268,22 @@ export default function DropPage({
         padding: "16px 24px",
         alignItems: "center", justifyContent: "space-between", gap: "16px",
       }}>
-        {reachedTarget ? (
+        {isClosed ? (
+          /* ── Did not fund state ── */
+          <>
+            <div>
+              <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "#B85450", fontWeight: 500, marginBottom: "3px" }}>
+                Drop closed
+              </p>
+              <span className="font-display" style={{ fontSize: "18px", fontWeight: 500, lineHeight: 1 }}>
+                Did not fund.
+              </span>
+            </div>
+            <Link href="/" className="btn-primary" style={{ borderRadius: "2px", textDecoration: "none", flexShrink: 0 }}>
+              Browse drops →
+            </Link>
+          </>
+        ) : reachedTarget ? (
           /* ── Waitlist state ── */
           <>
             <div>

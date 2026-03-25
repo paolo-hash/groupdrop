@@ -67,6 +67,11 @@ export default function Home() {
   const [conciergeForm, setConciergeForm] = useState({ name: "", email: "", topic: "General Question", message: "" });
   const [conciergeSent, setConciergeSent] = useState(false);
 
+  /* Email capture modal — first visit only */
+  const [showEmailCapture, setShowEmailCapture] = useState(false);
+  const [emailCaptureValue, setEmailCaptureValue] = useState("");
+  const [emailCaptureSent, setEmailCaptureSent] = useState(false);
+
   /* Member counts — number of orders per drop */
   const [memberCountMap, setMemberCountMap] = useState<Record<string, number>>({});
 
@@ -224,6 +229,14 @@ export default function Home() {
     const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  /* Email capture — show after 5s on first visit, logged-out visitors only */
+  useEffect(() => {
+    if (user) return;
+    if (localStorage.getItem("gd_email_captured")) return;
+    const t = setTimeout(() => setShowEmailCapture(true), 5000);
+    return () => clearTimeout(t);
+  }, [user]);
 
   /* ===============================
      Helpers
@@ -454,6 +467,81 @@ export default function Home() {
         CHANGE: Background changed from bg-neutral-50 to var(--cream) via body rule.
         Text color changed from neutral-900 to var(--ink) — warmer and more refined.
       */}
+      {/* ── Email capture modal ───────────────────────────────────── */}
+      {showEmailCapture && (
+        <div
+          onClick={() => { setShowEmailCapture(false); localStorage.setItem("gd_email_captured", "1"); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 110, backgroundColor: 'rgba(26,24,20,0.6)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+        >
+          <div
+            className="grain"
+            onClick={(e) => e.stopPropagation()}
+            style={{ backgroundColor: '#FDFAF5', border: '1px solid var(--gold)', borderRadius: '4px', padding: 'clamp(40px, 6vw, 60px) clamp(32px, 6vw, 56px)', maxWidth: '480px', width: '100%', position: 'relative', overflow: 'hidden' }}
+          >
+            {/* Close */}
+            <button
+              onClick={() => { setShowEmailCapture(false); localStorage.setItem("gd_email_captured", "1"); }}
+              style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--ink-muted)', lineHeight: 1, fontFamily: 'inherit' }}
+              aria-label="Close"
+            >×</button>
+
+            {/* Gold rule + overline */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ width: '28px', height: '1px', backgroundColor: 'var(--gold)' }} />
+              <span style={{ fontSize: '9px', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500 }}>
+                Inner Circle
+              </span>
+            </div>
+
+            {emailCaptureSent ? (
+              <div style={{ textAlign: 'center', padding: '16px 0 8px' }}>
+                <h3 className="font-display" style={{ fontSize: 'clamp(28px, 5vw, 38px)', fontWeight: 500, lineHeight: 1.05, marginBottom: '16px' }}>
+                  <em style={{ fontStyle: 'italic' }}>You&apos;re in.</em>
+                </h3>
+                <p style={{ fontSize: '14px', fontWeight: 300, color: 'var(--ink-muted)', lineHeight: 1.75 }}>
+                  We&apos;ll reach out when the next drop opens — before anyone else knows.
+                </p>
+              </div>
+            ) : (
+              <>
+                <h3 className="font-display" style={{ fontSize: 'clamp(28px, 5vw, 40px)', fontWeight: 500, lineHeight: 1.05, letterSpacing: '-0.01em', marginBottom: '12px' }}>
+                  First access.<br /><em style={{ fontStyle: 'italic' }}>Always.</em>
+                </h3>
+                <p style={{ fontSize: '14px', fontWeight: 300, color: 'var(--ink-muted)', lineHeight: 1.8, marginBottom: '32px' }}>
+                  Our drops sell out. Leave your email and we&apos;ll notify you the moment a new allocation opens — before it goes public.
+                </p>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setEmailCaptureSent(true);
+                    localStorage.setItem("gd_email_captured", "1");
+                  }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+                >
+                  <input
+                    type="email"
+                    required
+                    placeholder="your@email.com"
+                    value={emailCaptureValue}
+                    onChange={(e) => setEmailCaptureValue(e.target.value)}
+                    style={{ width: '100%', backgroundColor: 'var(--cream)', border: '1px solid var(--border)', padding: '13px 16px', fontSize: '14px', fontWeight: 300, fontFamily: 'inherit', color: 'var(--ink)', outline: 'none', boxSizing: 'border-box' }}
+                    onFocus={(e) => { e.target.style.borderColor = 'var(--gold)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; }}
+                  />
+                  <button type="submit" className="btn-primary" style={{ borderRadius: '2px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', padding: '14px' }}>
+                    Request early access →
+                  </button>
+                </form>
+                <p style={{ fontSize: '10px', color: 'var(--ink-muted)', fontWeight: 300, marginTop: '16px', letterSpacing: '0.02em' }}>
+                  No spam. Unsubscribe anytime. By continuing you agree to our{' '}
+                  <a href="/privacy" style={{ color: 'var(--ink-muted)', textDecoration: 'underline' }}>Privacy Policy</a>.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Concierge modal ──────────────────────────────────────── */}
       {showConcierge && (
         <div onClick={() => setShowConcierge(false)} style={{ position: 'fixed', inset: 0, zIndex: 100, backgroundColor: 'rgba(26,24,20,0.55)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
