@@ -545,13 +545,24 @@ export default function DropPage({
               <em style={{ fontStyle: "italic" }}>{drop.name}</em>
             </h2>
 
-            {/* Authorized amount */}
-            <p className="font-display" style={{
-              fontSize: "28px", fontWeight: 300,
-              color: "var(--gold)", marginBottom: "24px",
-            }}>
-              {moneyFromCents(successTotal)} authorized
-            </p>
+            {/* Line items */}
+            <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", margin: "0 0 24px", padding: "20px 0" }}>
+              {cartItems.map((item) => (
+                <div key={item.sku.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "16px", marginBottom: "10px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)", textAlign: "left" }}>
+                    {item.sku.name}
+                    <span style={{ marginLeft: "8px", fontSize: "11px", color: "var(--ink-muted)", opacity: 0.6 }}>× {item.qty}</span>
+                  </span>
+                  <span style={{ fontSize: "13px", fontWeight: 400, color: "var(--ink)", flexShrink: 0 }}>
+                    {moneyFromCents(item.lineTotal)}
+                  </span>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "16px", paddingTop: "12px", marginTop: "4px", borderTop: "1px solid var(--border)" }}>
+                <span style={{ fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>Total authorized</span>
+                <span className="font-display" style={{ fontSize: "20px", fontWeight: 500, color: "var(--gold)" }}>{moneyFromCents(successTotal)}</span>
+              </div>
+            </div>
 
             {/* Body */}
             <p style={{
@@ -584,7 +595,7 @@ export default function DropPage({
           borderBottom: "1px solid var(--border)",
           position: "sticky",
           top: 0,
-          zIndex: 50,
+          zIndex: 65,
           backdropFilter: "blur(12px)",
           backgroundColor: "rgba(247,244,238,0.88)",
         }}>

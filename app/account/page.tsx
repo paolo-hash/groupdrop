@@ -266,7 +266,7 @@ export default function AccountPage() {
 
         {/* ── Nav ─────────────────────────────────────────── */}
         <header style={{
-          borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 50,
+          borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 65,
           backdropFilter: "blur(12px)", backgroundColor: "rgba(247,244,238,0.88)",
         }}>
           <div style={{

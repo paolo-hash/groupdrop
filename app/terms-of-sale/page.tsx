@@ -53,7 +53,7 @@ export default function TermsOfSalePage() {
         </div>
       )}
 
-      <header style={{ borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 50, backdropFilter: "blur(12px)", backgroundColor: "rgba(247,244,238,0.88)" }}>
+      <header style={{ borderBottom: "1px solid var(--border)", position: "sticky", top: 0, zIndex: 65, backdropFilter: "blur(12px)", backgroundColor: "rgba(247,244,238,0.88)" }}>
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 28px", display: "flex", justifyContent: "space-between", alignItems: "center", height: "68px" }}>
           <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "10px" }}>
             <span className="font-display" style={{ fontSize: "22px", fontWeight: 500, letterSpacing: "0.04em", color: "var(--ink)" }}>groupdrop</span>
