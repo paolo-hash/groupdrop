@@ -1205,9 +1205,14 @@ export default function Home() {
 
                     {/* Drop closed label if closes_at has passed */}
                     {!isComplete && !countdown && (
-                      <p style={{ fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: '20px' }}>
-                        Drop closed
-                      </p>
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#B85450', fontWeight: 500, marginBottom: '10px' }}>
+                          Drop closed
+                        </p>
+                        <p className="font-display" style={{ fontSize: '28px', fontWeight: 500, color: '#B85450', lineHeight: 1, paddingBottom: '13px' }}>
+                          Did not fund
+                        </p>
+                      </div>
                     )}
 
                     {/* Member count */}

@@ -56,10 +56,37 @@ const tiers = [
 
 export default function JoinPage() {
   const [billing, setBilling] = useState<"monthly" | "annual">("annual");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: SHARED_STYLES }} />
+
+      {/* ── Mobile menu ─────────────────────────────────────── */}
+      {menuOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 55, background: "var(--cream)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", animation: "menuFadeIn 0.2s ease forwards" }}>
+          <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", marginBottom: "48px" }} />
+          <nav style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "36px" }}>
+            <Link href="/" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              Home
+            </Link>
+            <Link href="/about" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              About
+            </Link>
+            <Link href="/faq" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              FAQ
+            </Link>
+            <Link href="/join" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--gold)", textDecoration: "none", fontStyle: "italic" }}>
+              Join
+            </Link>
+          </nav>
+          <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", marginTop: "48px" }} />
+        </div>
+      )}
 
       <main style={{ minHeight: "100vh", backgroundColor: "var(--cream)", color: "var(--ink)" }}>
 
@@ -92,6 +119,14 @@ export default function JoinPage() {
               <Link href="/faq" className="nav-link" style={{ textDecoration: "none" }}>FAQ</Link>
               <Link href="/join" className="nav-link" style={{ textDecoration: "none", color: "var(--gold)" }}>Join</Link>
             </nav>
+            {/* Hamburger — mobile only */}
+            <button onClick={() => setMenuOpen((o) => !o)} className="flex md:hidden"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", flexDirection: "column", gap: "4.5px", zIndex: 60 }}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}>
+              <span className={`bar ${menuOpen ? "bar-top-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-mid-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-bot-open" : ""}`} />
+            </button>
           </div>
         </header>
 
