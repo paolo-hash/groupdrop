@@ -140,11 +140,30 @@ export default function DropPage({
 
   /* Success modal — shown after joining a drop */
   const [successTotal, setSuccessTotal] = useState<number | null>(null);
+  const [successItems, setSuccessItems] = useState<{ sku: Sku; qty: number; lineTotal: number }[]>([]);
+
+  /* Referral */
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [myCredits, setMyCredits] = useState(0); // unused credit balance in cents
+  const [pendingRef, setPendingRef] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   /* Animated raised amount — smoothly counts up when raisedCents changes */
   const [animatedRaisedCents, setAnimatedRaisedCents] = useState(0);
   const animRafRef = useRef<number>(0);
   const prevRaisedRef = useRef(0);
+
+  /* Capture ?ref param from URL → localStorage */
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) {
+      localStorage.setItem("gd_ref", ref);
+      setPendingRef(ref);
+    } else {
+      const stored = localStorage.getItem("gd_ref");
+      if (stored) setPendingRef(stored);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -208,6 +227,14 @@ export default function DropPage({
           .eq("id", user.id)
           .single();
         if (data) setProfile(data as Profile);
+
+        /* Referral code + unused credits */
+        const [{ data: codeData }, { data: creditsData }] = await Promise.all([
+          supabase.rpc("get_or_create_referral_code"),
+          supabase.rpc("get_my_referral_credits"),
+        ]);
+        if (codeData) setReferralCode(codeData as string);
+        if (creditsData != null) setMyCredits(creditsData as number);
 
         /* Check if user is already on the waitlist for this drop */
         const { data: waitlistRow } = await supabase
@@ -302,6 +329,16 @@ export default function DropPage({
     [cartItems]
   );
 
+  const creditApplied = useMemo(
+    () => (cartTotal > 0 && myCredits > 0 ? Math.min(myCredits, cartTotal) : 0),
+    [cartTotal, myCredits]
+  );
+
+  const effectiveTotal = useMemo(
+    () => Math.max(cartTotal - creditApplied, 0),
+    [cartTotal, creditApplied]
+  );
+
   const percent = useMemo(() => {
     if (!drop || drop.targetCents <= 0) return 0;
     return Math.min(Math.round((drop.raisedCents / drop.targetCents) * 100), 100);
@@ -365,6 +402,7 @@ export default function DropPage({
     const previousProfile = profile;
 
     setDrop({ ...drop, raisedCents: nextRaisedCents });
+    setSuccessItems([...cartItems]); // snapshot before clearing
     /*
       CHANGE: Optimistically increment drops_used_this_month in local state
       so the UI updates immediately without waiting for the DB call.
@@ -416,7 +454,7 @@ export default function DropPage({
 
       const totalUnits = orderItems.reduce((sum, item) => sum + item.qty, 0);
 
-      await supabase
+      const { data: orderData } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
@@ -432,13 +470,35 @@ export default function DropPage({
           drop_target_cents: drop.targetCents,
           drop_raised_cents_at_order: drop.raisedCents,
           items: orderItems,
-          total_cents: cartTotal,
+          total_cents: effectiveTotal,
           total_units: totalUnits,
           status: "pending",
+        })
+        .select("id")
+        .single();
+
+      const orderId = orderData?.id ?? null;
+
+      /* Record referral if this visitor came via a referral link */
+      const refCode = localStorage.getItem("gd_ref");
+      if (refCode && orderId) {
+        await supabase.rpc("record_referral", {
+          p_code: refCode,
+          p_drop_id: drop.id,
+          p_order_id: orderId,
         });
+        localStorage.removeItem("gd_ref");
+        setPendingRef(null);
+      }
+
+      /* Mark credit as used */
+      if (creditApplied > 0 && orderId) {
+        await supabase.rpc("use_referral_credit", { p_order_id: orderId });
+        setMyCredits(0);
+      }
     }
 
-    setSuccessTotal(cartTotal);
+    setSuccessTotal(effectiveTotal);
   }
 
   async function handleWaitlist() {
@@ -549,7 +609,7 @@ export default function DropPage({
 
             {/* Line items */}
             <div style={{ borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)", margin: "0 0 24px", padding: "20px 0" }}>
-              {cartItems.map((item) => (
+              {successItems.map((item) => (
                 <div key={item.sku.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "16px", marginBottom: "10px" }}>
                   <span style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)", textAlign: "left" }}>
                     {item.sku.name}
@@ -573,6 +633,32 @@ export default function DropPage({
             }}>
               Your allocation is reserved. We&apos;ll only charge your card if the drop hits its target — and you&apos;ll be the first to know.
             </p>
+
+            {/* Share */}
+            {referralCode && (
+              <div style={{ marginBottom: "28px" }}>
+                <p style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.7, marginBottom: "12px" }}>
+                  Know someone who&apos;d love this? Share your invite link — they get $25 off, and so do you when they join.
+                </p>
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/drops/${drop.slug}?ref=${referralCode}`;
+                    navigator.clipboard.writeText(url);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  style={{
+                    width: "100%", padding: "12px 16px", borderRadius: "2px",
+                    border: "1px solid var(--gold)", backgroundColor: "transparent",
+                    cursor: "pointer", fontFamily: "inherit",
+                    fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase",
+                    fontWeight: 500, color: "var(--gold)", transition: "all 0.15s ease",
+                  }}
+                >
+                  {copied ? "Link copied ✓" : "Copy invite link →"}
+                </button>
+              </div>
+            )}
 
             {/* CTAs */}
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
@@ -1128,12 +1214,31 @@ export default function DropPage({
 
                 <hr className="gold-rule" style={{ marginBottom: "20px" }} />
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: cartTotal > 0 ? "16px" : "24px" }}>
-                  <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>Total</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: creditApplied > 0 ? "8px" : cartTotal > 0 ? "16px" : "24px" }}>
+                  <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>
+                    {creditApplied > 0 ? "Subtotal" : "Total"}
+                  </span>
                   <span className="font-display" style={{ fontSize: "32px", fontWeight: 500 }}>
                     {moneyFromCents(cartTotal)}
                   </span>
                 </div>
+
+                {creditApplied > 0 && (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+                      <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>Referral credit</span>
+                      <span className="font-display" style={{ fontSize: "20px", fontWeight: 500, color: "var(--gold)" }}>
+                        -{moneyFromCents(creditApplied)}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: cartTotal > 0 ? "16px" : "24px" }}>
+                      <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>Total</span>
+                      <span className="font-display" style={{ fontSize: "32px", fontWeight: 500 }}>
+                        {moneyFromCents(effectiveTotal)}
+                      </span>
+                    </div>
+                  </>
+                )}
 
                 {cartTotal > 0 && (
                   <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.6, marginBottom: "20px", fontStyle: "italic" }}>
@@ -1191,7 +1296,7 @@ export default function DropPage({
                         ? "Target reached"
                         : cartTotal <= 0
                         ? "Join this drop \u2192"
-                        : "Authorize " + moneyFromCents(cartTotal) + " \u2192"}
+                        : "Authorize " + moneyFromCents(effectiveTotal) + " \u2192"}
                     </button>
 
                     {statusMsg && (
@@ -1203,6 +1308,35 @@ export default function DropPage({
                         <p style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 400, letterSpacing: "0.01em" }}>
                           {statusMsg}
                         </p>
+                      </div>
+                    )}
+
+                    {/* Share / referral */}
+                    {referralCode && (
+                      <div style={{ marginTop: "24px", borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
+                        <p style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "6px" }}>
+                          Invite a friend
+                        </p>
+                        <p style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.6, marginBottom: "12px" }}>
+                          They get $25 off their first order. You get $25 when they join.
+                        </p>
+                        <button
+                          onClick={() => {
+                            const url = `${window.location.origin}/drops/${drop.slug}?ref=${referralCode}`;
+                            navigator.clipboard.writeText(url);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                          style={{
+                            width: "100%", padding: "10px 16px", borderRadius: "2px",
+                            border: "1px solid var(--gold)", backgroundColor: "transparent",
+                            cursor: "pointer", fontFamily: "inherit",
+                            fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase",
+                            fontWeight: 500, color: "var(--gold)", transition: "all 0.15s ease",
+                          }}
+                        >
+                          {copied ? "Link copied ✓" : "Copy invite link →"}
+                        </button>
                       </div>
                     )}
                   </>
@@ -1359,7 +1493,7 @@ export default function DropPage({
                 className="btn-primary"
                 style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
               >
-                {cartTotal <= 0 ? "Add items →" : `Authorize ${moneyFromCents(cartTotal)} →`}
+                {cartTotal <= 0 ? "Add items →" : `Authorize ${moneyFromCents(effectiveTotal)} →`}
               </button>
             )}
           </>

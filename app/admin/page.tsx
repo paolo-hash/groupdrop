@@ -56,6 +56,24 @@ type NewDropForm = {
   hero_image_url: string;
 };
 
+type Sku = {
+  id: string;
+  drop_id: string;
+  name: string;
+  subtitle: string | null;
+  price_cents: number;
+  tag: string | null;
+  sort_order: number;
+};
+
+type SkuForm = {
+  name: string;
+  subtitle: string;
+  price: string;
+  tag: string;
+  sort_order: string;
+};
+
 type WaitlistEntry = {
   id: string;
   user_email: string;
@@ -118,6 +136,13 @@ export default function AdminPage() {
     title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "",
   });
   const [newDropSaving, setNewDropSaving] = useState(false);
+  const [expandedDrop, setExpandedDrop] = useState<string | null>(null);
+  const [skusByDrop, setSkusByDrop] = useState<Record<string, Sku[]>>({});
+  const [skusLoading, setSkusLoading] = useState<Record<string, boolean>>({});
+  const [editingSkuId, setEditingSkuId] = useState<string | null>(null);
+  const [editSkuForm, setEditSkuForm] = useState<SkuForm>({ name: "", subtitle: "", price: "", tag: "", sort_order: "" });
+  const [addingSkuForDrop, setAddingSkuForDrop] = useState<string | null>(null);
+  const [newSkuForm, setNewSkuForm] = useState<SkuForm>({ name: "", subtitle: "", price: "", tag: "", sort_order: "" });
 
   useEffect(() => {
     async function init() {
@@ -174,13 +199,12 @@ export default function AdminPage() {
   async function createDrop() {
     if (!newDropForm.title || !newDropForm.slug || !newDropForm.target) return;
     setNewDropSaving(true);
-    const targetCentsVal = Math.round(parseFloat(newDropForm.target) * 100);
     const { data, error } = await supabase.from("drops").insert({
       title: newDropForm.title,
       slug: newDropForm.slug,
       description: newDropForm.description || null,
-      target_cents: targetCentsVal,
-      raised_cents: 0,
+      target: parseFloat(newDropForm.target),
+      raised: 0,
       closes_at: newDropForm.closes_at || null,
       hero_image_url: newDropForm.hero_image_url || null,
     }).select().single();
@@ -188,12 +212,87 @@ export default function AdminPage() {
       setDrops((prev) => [data as Drop, ...prev]);
       setShowNewDrop(false);
       setNewDropForm({ title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "" });
+    } else if (error) {
+      alert("Error creating drop: " + error.message);
     }
     setNewDropSaving(false);
   }
 
   function slugify(s: string) {
     return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  async function loadSkus(dropId: string) {
+    if (skusByDrop[dropId]) return;
+    setSkusLoading((prev) => ({ ...prev, [dropId]: true }));
+    const { data } = await supabase
+      .from("drop_skus")
+      .select("*")
+      .eq("drop_id", dropId)
+      .order("sort_order", { ascending: true });
+    setSkusByDrop((prev) => ({ ...prev, [dropId]: (data ?? []) as Sku[] }));
+    setSkusLoading((prev) => ({ ...prev, [dropId]: false }));
+  }
+
+  function toggleDropExpand(dropId: string) {
+    if (expandedDrop === dropId) {
+      setExpandedDrop(null);
+    } else {
+      setExpandedDrop(dropId);
+      loadSkus(dropId);
+    }
+  }
+
+  async function saveSku(dropId: string) {
+    const priceCents = Math.round(parseFloat(editSkuForm.price) * 100);
+    await supabase.from("drop_skus").update({
+      name: editSkuForm.name,
+      subtitle: editSkuForm.subtitle || null,
+      price_cents: priceCents,
+      tag: editSkuForm.tag || null,
+      sort_order: parseInt(editSkuForm.sort_order) || 0,
+    }).eq("id", editingSkuId!);
+    setSkusByDrop((prev) => ({
+      ...prev,
+      [dropId]: (prev[dropId] ?? []).map((s) =>
+        s.id === editingSkuId
+          ? { ...s, name: editSkuForm.name, subtitle: editSkuForm.subtitle || null, price_cents: priceCents, tag: editSkuForm.tag || null, sort_order: parseInt(editSkuForm.sort_order) || 0 }
+          : s
+      ),
+    }));
+    setEditingSkuId(null);
+  }
+
+  async function deleteSku(dropId: string, skuId: string) {
+    if (!confirm("Delete this SKU?")) return;
+    await supabase.from("drop_skus").delete().eq("id", skuId);
+    setSkusByDrop((prev) => ({
+      ...prev,
+      [dropId]: (prev[dropId] ?? []).filter((s) => s.id !== skuId),
+    }));
+  }
+
+  async function createSku(dropId: string) {
+    if (!newSkuForm.name || !newSkuForm.price) return;
+    const priceCents = Math.round(parseFloat(newSkuForm.price) * 100);
+    const { data, error } = await supabase.from("drop_skus").insert({
+      drop_id: dropId,
+      name: newSkuForm.name,
+      subtitle: newSkuForm.subtitle || null,
+      price_cents: priceCents,
+      tag: newSkuForm.tag || null,
+      sort_order: parseInt(newSkuForm.sort_order) || 0,
+    }).select().single();
+    if (!error && data) {
+      setSkusByDrop((prev) => ({
+        ...prev,
+        [dropId]: [...(prev[dropId] ?? []), data as Sku].sort((a, b) => a.sort_order - b.sort_order),
+      }));
+      setNewSkuForm({ name: "", subtitle: "", price: "", tag: "", sort_order: "" });
+      setAddingSkuForDrop(null);
+    } else if (error) {
+      alert("Error creating SKU: " + error.message);
+    }
   }
 
   if (!authorized || loading) {
@@ -758,64 +857,172 @@ export default function AdminPage() {
               )}
 
               {/* Existing drops list */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-                <div style={{
-                  display: "grid", gridTemplateColumns: "1fr 120px 140px 1fr auto",
-                  gap: "16px", padding: "10px 20px",
-                  backgroundColor: "var(--parchment)", borderRadius: "2px",
-                }}>
-                  {["Drop", "Funded", "Closes", "Progress", "Actions"].map((h) => (
-                    <span key={h} style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>
-                      {h}
-                    </span>
-                  ))}
-                </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {drops.map((drop) => {
                   const raised = raisedCents(drop);
                   const target = targetCents(drop);
                   const pct = target > 0 ? Math.min(Math.round((raised / target) * 100), 100) : 0;
                   const isClosed = drop.closes_at ? new Date(drop.closes_at) < new Date() : false;
+                  const isExpanded = expandedDrop === drop.id;
+                  const skus = skusByDrop[drop.id] ?? [];
+                  const isLoadingSkus = skusLoading[drop.id] ?? false;
+                  const isAddingSkus = addingSkuForDrop === drop.id;
+
                   return (
-                    <div key={drop.id} style={{
-                      display: "grid", gridTemplateColumns: "1fr 120px 140px 1fr auto",
-                      gap: "16px", padding: "16px 20px",
-                      backgroundColor: "#FDFAF5", border: "1px solid var(--border)", borderRadius: "2px",
-                      alignItems: "center",
-                    }}>
-                      <div>
-                        <p style={{ fontSize: "13px", fontWeight: 500, marginBottom: "2px" }}>{dropDisplayName(drop)}</p>
-                        <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)" }}>{drop.slug}</p>
-                      </div>
-                      <p className="font-display" style={{ fontSize: "18px", fontWeight: 500, color: pct >= 100 ? "var(--gold)" : "var(--ink)" }}>
-                        {pct}%
-                      </p>
-                      <div>
+                    <div key={drop.id} style={{ border: "1px solid var(--border)", borderRadius: "4px", overflow: "hidden" }}>
+
+                      {/* Drop header row */}
+                      <div
+                        onClick={() => toggleDropExpand(drop.id)}
+                        style={{
+                          display: "grid", gridTemplateColumns: "1fr 100px 140px 1fr auto",
+                          gap: "16px", padding: "16px 20px",
+                          backgroundColor: "#FDFAF5", cursor: "pointer",
+                          alignItems: "center",
+                          transition: "background-color 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#FAF7F1")}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FDFAF5")}
+                      >
+                        <div>
+                          <p style={{ fontSize: "13px", fontWeight: 500, marginBottom: "2px" }}>
+                            {isExpanded ? "▾" : "▸"} {dropDisplayName(drop)}
+                          </p>
+                          <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)" }}>{drop.slug}</p>
+                        </div>
+                        <p className="font-display" style={{ fontSize: "18px", fontWeight: 500, color: pct >= 100 ? "var(--gold)" : "var(--ink)" }}>
+                          {pct}%
+                        </p>
                         <p style={{ fontSize: "11px", fontWeight: 300, color: isClosed ? "#B85450" : "var(--ink-muted)" }}>
                           {isClosed ? "Closed" : drop.closes_at ? new Date(drop.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                         </p>
+                        <div style={{ height: "3px", backgroundColor: "var(--parchment)", borderRadius: "2px", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, var(--gold), var(--gold-light))", borderRadius: "2px" }} />
+                        </div>
+                        <div style={{ display: "flex", gap: "6px", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                          {!isClosed && (
+                            <button onClick={() => closeDropNow(drop.id)}
+                              style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid #B85450", backgroundColor: "transparent", color: "#B85450" }}>
+                              Close now
+                            </button>
+                          )}
+                          {[7, 14, 30].map((days) => (
+                            <button key={days} onClick={() => extendDrop(drop.id, days)}
+                              style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid var(--border)", backgroundColor: "transparent", color: "var(--ink-muted)" }}>
+                              +{days}d
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div style={{ height: "3px", backgroundColor: "var(--parchment)", borderRadius: "2px", overflow: "hidden" }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, var(--gold), var(--gold-light))", borderRadius: "2px" }} />
-                      </div>
-                      <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-                        {!isClosed && (
-                          <button
-                            onClick={() => closeDropNow(drop.id)}
-                            style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid #B85450", backgroundColor: "transparent", color: "#B85450" }}
-                          >
-                            Close now
-                          </button>
-                        )}
-                        {[7, 14, 30].map((days) => (
-                          <button
-                            key={days}
-                            onClick={() => extendDrop(drop.id, days)}
-                            style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid var(--border)", backgroundColor: "transparent", color: "var(--ink-muted)" }}
-                          >
-                            +{days}d
-                          </button>
-                        ))}
-                      </div>
+
+                      {/* SKU panel */}
+                      {isExpanded && (
+                        <div style={{ backgroundColor: "var(--parchment)", borderTop: "1px solid var(--border)", padding: "20px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                            <p style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>
+                              SKUs {!isLoadingSkus && `(${skus.length})`}
+                            </p>
+                            <button
+                              onClick={() => { setAddingSkuForDrop(isAddingSkus ? null : drop.id); setNewSkuForm({ name: "", subtitle: "", price: "", tag: "", sort_order: String(skus.length) }); }}
+                              style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 12px", borderRadius: "2px", border: "1px solid var(--gold)", backgroundColor: "transparent", color: "var(--gold)" }}>
+                              {isAddingSkus ? "Cancel" : "+ Add SKU"}
+                            </button>
+                          </div>
+
+                          {/* Add SKU form */}
+                          {isAddingSkus && (
+                            <div style={{ backgroundColor: "#FDFAF5", border: "1px solid var(--border)", borderRadius: "4px", padding: "16px", marginBottom: "16px" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 100px 80px", gap: "10px", marginBottom: "10px" }}>
+                                <div>
+                                  <label style={labelStyle}>Name *</label>
+                                  <input style={inputStyle} placeholder="Classic Tote" value={newSkuForm.name} onChange={(e) => setNewSkuForm((f) => ({ ...f, name: e.target.value }))} />
+                                </div>
+                                <div>
+                                  <label style={labelStyle}>Subtitle</label>
+                                  <input style={inputStyle} placeholder="Natural leather" value={newSkuForm.subtitle} onChange={(e) => setNewSkuForm((f) => ({ ...f, subtitle: e.target.value }))} />
+                                </div>
+                                <div>
+                                  <label style={labelStyle}>Price ($) *</label>
+                                  <input style={inputStyle} type="number" placeholder="250" value={newSkuForm.price} onChange={(e) => setNewSkuForm((f) => ({ ...f, price: e.target.value }))} />
+                                </div>
+                                <div>
+                                  <label style={labelStyle}>Tag</label>
+                                  <input style={inputStyle} placeholder="Best seller" value={newSkuForm.tag} onChange={(e) => setNewSkuForm((f) => ({ ...f, tag: e.target.value }))} />
+                                </div>
+                                <div>
+                                  <label style={labelStyle}>Order</label>
+                                  <input style={inputStyle} type="number" placeholder="0" value={newSkuForm.sort_order} onChange={(e) => setNewSkuForm((f) => ({ ...f, sort_order: e.target.value }))} />
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => createSku(drop.id)}
+                                disabled={!newSkuForm.name || !newSkuForm.price}
+                                className="btn-primary"
+                                style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "10px", padding: "8px 18px", opacity: (!newSkuForm.name || !newSkuForm.price) ? 0.5 : 1 }}>
+                                Add SKU →
+                              </button>
+                            </div>
+                          )}
+
+                          {/* SKU list */}
+                          {isLoadingSkus ? (
+                            <p style={{ fontSize: "11px", color: "var(--ink-muted)", fontWeight: 300 }}>Loading…</p>
+                          ) : skus.length === 0 ? (
+                            <p style={{ fontSize: "11px", color: "var(--ink-muted)", fontWeight: 300 }}>No SKUs yet — add one above.</p>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                              {/* Header */}
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 60px 80px", gap: "12px", padding: "6px 12px" }}>
+                                {["Name", "Subtitle", "Price", "Tag", "Order", ""].map((h) => (
+                                  <span key={h} style={{ fontSize: "9px", letterSpacing: "0.16em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>{h}</span>
+                                ))}
+                              </div>
+                              {skus.map((sku) => {
+                                const isEditing = editingSkuId === sku.id;
+                                return (
+                                  <div key={sku.id} style={{ backgroundColor: "#FDFAF5", border: "1px solid var(--border)", borderRadius: "2px", padding: "10px 12px" }}>
+                                    {isEditing ? (
+                                      <div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 60px", gap: "10px", marginBottom: "10px" }}>
+                                          <input style={inputStyle} value={editSkuForm.name} onChange={(e) => setEditSkuForm((f) => ({ ...f, name: e.target.value }))} />
+                                          <input style={inputStyle} placeholder="Subtitle" value={editSkuForm.subtitle} onChange={(e) => setEditSkuForm((f) => ({ ...f, subtitle: e.target.value }))} />
+                                          <input style={inputStyle} type="number" placeholder="Price ($)" value={editSkuForm.price} onChange={(e) => setEditSkuForm((f) => ({ ...f, price: e.target.value }))} />
+                                          <input style={inputStyle} placeholder="Tag" value={editSkuForm.tag} onChange={(e) => setEditSkuForm((f) => ({ ...f, tag: e.target.value }))} />
+                                          <input style={inputStyle} type="number" placeholder="0" value={editSkuForm.sort_order} onChange={(e) => setEditSkuForm((f) => ({ ...f, sort_order: e.target.value }))} />
+                                        </div>
+                                        <div style={{ display: "flex", gap: "8px" }}>
+                                          <button onClick={() => saveSku(drop.id)} className="btn-primary" style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit", fontSize: "10px", padding: "7px 16px" }}>Save</button>
+                                          <button onClick={() => setEditingSkuId(null)} style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "7px 16px", borderRadius: "2px", border: "1px solid var(--border)", backgroundColor: "transparent", color: "var(--ink-muted)" }}>Cancel</button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 60px 80px", gap: "12px", alignItems: "center" }}>
+                                        <span style={{ fontSize: "12px", fontWeight: 500 }}>{sku.name}</span>
+                                        <span style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)" }}>{sku.subtitle || "—"}</span>
+                                        <span className="font-display" style={{ fontSize: "14px", fontWeight: 500 }}>${(sku.price_cents / 100).toFixed(0)}</span>
+                                        <span style={{ fontSize: "10px", color: "var(--ink-muted)" }}>{sku.tag || "—"}</span>
+                                        <span style={{ fontSize: "11px", color: "var(--ink-muted)" }}>{sku.sort_order}</span>
+                                        <div style={{ display: "flex", gap: "6px" }}>
+                                          <button
+                                            onClick={() => { setEditingSkuId(sku.id); setEditSkuForm({ name: sku.name, subtitle: sku.subtitle ?? "", price: String(sku.price_cents / 100), tag: sku.tag ?? "", sort_order: String(sku.sort_order) }); }}
+                                            style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "4px 8px", borderRadius: "2px", border: "1px solid var(--border)", backgroundColor: "transparent", color: "var(--ink-muted)" }}>
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() => deleteSku(drop.id, sku.id)}
+                                            style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "4px 8px", borderRadius: "2px", border: "1px solid #B85450", backgroundColor: "transparent", color: "#B85450" }}>
+                                            Del
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
