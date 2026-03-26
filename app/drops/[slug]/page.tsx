@@ -1128,12 +1128,18 @@ export default function DropPage({
 
                 <hr className="gold-rule" style={{ marginBottom: "20px" }} />
 
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: cartTotal > 0 ? "16px" : "24px" }}>
                   <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>Total</span>
                   <span className="font-display" style={{ fontSize: "32px", fontWeight: 500 }}>
                     {moneyFromCents(cartTotal)}
                   </span>
                 </div>
+
+                {cartTotal > 0 && (
+                  <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.6, marginBottom: "20px", fontStyle: "italic" }}>
+                    Your card is reserved but not charged until this drop reaches its target. If it doesn&apos;t fund, you owe nothing.
+                  </p>
+                )}
 
                 {authChecked && !profile ? (
                   /* ── Member gate — logged-out visitors ── */

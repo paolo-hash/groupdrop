@@ -42,6 +42,18 @@ type Drop = {
   raised?: number | null;
   target_cents?: number | null;
   target?: number | null;
+  closes_at?: string | null;
+  hero_image_url?: string | null;
+  description?: string | null;
+};
+
+type NewDropForm = {
+  title: string;
+  slug: string;
+  description: string;
+  target: string;
+  closes_at: string;
+  hero_image_url: string;
 };
 
 type WaitlistEntry = {
@@ -100,7 +112,12 @@ export default function AdminPage() {
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("all");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "waitlist">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "waitlist" | "drops">("orders");
+  const [showNewDrop, setShowNewDrop] = useState(false);
+  const [newDropForm, setNewDropForm] = useState<NewDropForm>({
+    title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "",
+  });
+  const [newDropSaving, setNewDropSaving] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -136,6 +153,47 @@ export default function AdminPage() {
   async function updateOrderStatus(orderId: string, newStatus: OrderStatus) {
     await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
     setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: newStatus } : o));
+  }
+
+  async function closeDropNow(dropId: string) {
+    const now = new Date().toISOString();
+    await supabase.from("drops").update({ closes_at: now }).eq("id", dropId);
+    setDrops((prev) => prev.map((d) => d.id === dropId ? { ...d, closes_at: now } : d));
+  }
+
+  async function extendDrop(dropId: string, days: number) {
+    const drop = drops.find((d) => d.id === dropId);
+    const base = drop?.closes_at ? new Date(drop.closes_at) : new Date();
+    if (base < new Date()) base.setTime(Date.now());
+    base.setDate(base.getDate() + days);
+    const newDate = base.toISOString();
+    await supabase.from("drops").update({ closes_at: newDate }).eq("id", dropId);
+    setDrops((prev) => prev.map((d) => d.id === dropId ? { ...d, closes_at: newDate } : d));
+  }
+
+  async function createDrop() {
+    if (!newDropForm.title || !newDropForm.slug || !newDropForm.target) return;
+    setNewDropSaving(true);
+    const targetCentsVal = Math.round(parseFloat(newDropForm.target) * 100);
+    const { data, error } = await supabase.from("drops").insert({
+      title: newDropForm.title,
+      slug: newDropForm.slug,
+      description: newDropForm.description || null,
+      target_cents: targetCentsVal,
+      raised_cents: 0,
+      closes_at: newDropForm.closes_at || null,
+      hero_image_url: newDropForm.hero_image_url || null,
+    }).select().single();
+    if (!error && data) {
+      setDrops((prev) => [data as Drop, ...prev]);
+      setShowNewDrop(false);
+      setNewDropForm({ title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "" });
+    }
+    setNewDropSaving(false);
+  }
+
+  function slugify(s: string) {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
 
   if (!authorized || loading) {
@@ -250,7 +308,7 @@ export default function AdminPage() {
           {/* ── View tabs ─────────────────────────────────────── */}
           <section style={{ paddingTop: "40px", paddingBottom: "0" }}>
             <div style={{ display: "flex", gap: "8px", marginBottom: "32px", borderBottom: "1px solid var(--border)", paddingBottom: "0" }}>
-              {(["orders", "waitlist"] as const).map((tab) => (
+              {(["orders", "waitlist", "drops"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -264,7 +322,7 @@ export default function AdminPage() {
                     transition: "all 0.15s ease",
                   }}
                 >
-                  {tab === "orders" ? `Orders (${orders.length})` : `Waitlist (${waitlist.length})`}
+                  {tab === "orders" ? `Orders (${orders.length})` : tab === "waitlist" ? `Waitlist (${waitlist.length})` : `Drops (${drops.length})`}
                 </button>
               ))}
             </div>
@@ -605,6 +663,166 @@ export default function AdminPage() {
             )}
             </>
           )}
+          {/* ── Drops tab ─────────────────────────────────────── */}
+          {activeTab === "drops" && (
+            <div style={{ paddingBottom: "80px" }}>
+
+              {/* New drop button */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "24px" }}>
+                <button
+                  onClick={() => setShowNewDrop((v) => !v)}
+                  className="btn-primary"
+                  style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  {showNewDrop ? "Cancel" : "+ New drop"}
+                </button>
+              </div>
+
+              {/* New drop form */}
+              {showNewDrop && (
+                <div className="grain" style={{
+                  backgroundColor: "#FDFAF5", border: "1px solid var(--border)",
+                  borderRadius: "4px", padding: "32px", marginBottom: "32px",
+                  position: "relative", overflow: "hidden",
+                }}>
+                  <p style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "24px" }}>
+                    New drop
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+                    <div>
+                      <label style={labelStyle}>Title</label>
+                      <input
+                        style={inputStyle}
+                        placeholder="Byredo Essentials"
+                        value={newDropForm.title}
+                        onChange={(e) => setNewDropForm((f) => ({ ...f, title: e.target.value, slug: slugify(e.target.value) }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Slug</label>
+                      <input
+                        style={inputStyle}
+                        placeholder="byredo-essentials"
+                        value={newDropForm.slug}
+                        onChange={(e) => setNewDropForm((f) => ({ ...f, slug: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Target ($)</label>
+                      <input
+                        style={inputStyle}
+                        type="number"
+                        placeholder="10000"
+                        value={newDropForm.target}
+                        onChange={(e) => setNewDropForm((f) => ({ ...f, target: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Closes at</label>
+                      <input
+                        style={inputStyle}
+                        type="datetime-local"
+                        value={newDropForm.closes_at}
+                        onChange={(e) => setNewDropForm((f) => ({ ...f, closes_at: e.target.value }))}
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Hero image URL (optional)</label>
+                      <input
+                        style={inputStyle}
+                        placeholder="https://..."
+                        value={newDropForm.hero_image_url}
+                        onChange={(e) => setNewDropForm((f) => ({ ...f, hero_image_url: e.target.value }))}
+                      />
+                    </div>
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <label style={labelStyle}>Description (optional)</label>
+                      <textarea
+                        style={{ ...inputStyle, resize: "vertical" }}
+                        rows={3}
+                        placeholder="Brand story and drop details…"
+                        value={newDropForm.description}
+                        onChange={(e) => setNewDropForm((f) => ({ ...f, description: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={createDrop}
+                    disabled={newDropSaving || !newDropForm.title || !newDropForm.slug || !newDropForm.target}
+                    className="btn-primary"
+                    style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit", opacity: (!newDropForm.title || !newDropForm.slug || !newDropForm.target) ? 0.5 : 1 }}
+                  >
+                    {newDropSaving ? "Saving…" : "Create drop →"}
+                  </button>
+                </div>
+              )}
+
+              {/* Existing drops list */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr 120px 140px 1fr auto",
+                  gap: "16px", padding: "10px 20px",
+                  backgroundColor: "var(--parchment)", borderRadius: "2px",
+                }}>
+                  {["Drop", "Funded", "Closes", "Progress", "Actions"].map((h) => (
+                    <span key={h} style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)" }}>
+                      {h}
+                    </span>
+                  ))}
+                </div>
+                {drops.map((drop) => {
+                  const raised = raisedCents(drop);
+                  const target = targetCents(drop);
+                  const pct = target > 0 ? Math.min(Math.round((raised / target) * 100), 100) : 0;
+                  const isClosed = drop.closes_at ? new Date(drop.closes_at) < new Date() : false;
+                  return (
+                    <div key={drop.id} style={{
+                      display: "grid", gridTemplateColumns: "1fr 120px 140px 1fr auto",
+                      gap: "16px", padding: "16px 20px",
+                      backgroundColor: "#FDFAF5", border: "1px solid var(--border)", borderRadius: "2px",
+                      alignItems: "center",
+                    }}>
+                      <div>
+                        <p style={{ fontSize: "13px", fontWeight: 500, marginBottom: "2px" }}>{dropDisplayName(drop)}</p>
+                        <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)" }}>{drop.slug}</p>
+                      </div>
+                      <p className="font-display" style={{ fontSize: "18px", fontWeight: 500, color: pct >= 100 ? "var(--gold)" : "var(--ink)" }}>
+                        {pct}%
+                      </p>
+                      <div>
+                        <p style={{ fontSize: "11px", fontWeight: 300, color: isClosed ? "#B85450" : "var(--ink-muted)" }}>
+                          {isClosed ? "Closed" : drop.closes_at ? new Date(drop.closes_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                        </p>
+                      </div>
+                      <div style={{ height: "3px", backgroundColor: "var(--parchment)", borderRadius: "2px", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, var(--gold), var(--gold-light))", borderRadius: "2px" }} />
+                      </div>
+                      <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                        {!isClosed && (
+                          <button
+                            onClick={() => closeDropNow(drop.id)}
+                            style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid #B85450", backgroundColor: "transparent", color: "#B85450" }}
+                          >
+                            Close now
+                          </button>
+                        )}
+                        {[7, 14, 30].map((days) => (
+                          <button
+                            key={days}
+                            onClick={() => extendDrop(drop.id, days)}
+                            style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid var(--border)", backgroundColor: "transparent", color: "var(--ink-muted)" }}
+                          >
+                            +{days}d
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           </section>
 
         </div>
@@ -612,6 +830,17 @@ export default function AdminPage() {
     </>
   );
 }
+
+const labelStyle: React.CSSProperties = {
+  display: "block", fontSize: "10px", letterSpacing: "0.14em",
+  textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", marginBottom: "6px",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", backgroundColor: "var(--cream)", border: "1px solid var(--border)",
+  padding: "10px 14px", fontFamily: "inherit", fontSize: "13px", fontWeight: 300,
+  color: "var(--ink)", outline: "none", boxSizing: "border-box",
+};
 
 /* ─────────────────────────────────────────────────────────────
    SHARED_STYLES

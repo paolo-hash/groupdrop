@@ -250,9 +250,38 @@ function LoginForm() {
    Page
 ───────────────────────────────────────────────────────────── */
 export default function LoginPage() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: SHARED_STYLES }} />
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 55, background: "var(--cream)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", animation: "menuFadeIn 0.2s ease forwards" }}>
+          <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", marginBottom: "48px" }} />
+          <nav style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "36px" }}>
+            <Link href="/" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              Home
+            </Link>
+            <Link href="/about" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              About
+            </Link>
+            <Link href="/faq" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", textDecoration: "none", fontStyle: "italic" }}>
+              FAQ
+            </Link>
+            <Link href="/join" className="font-display" onClick={() => setMenuOpen(false)}
+              style={{ fontSize: "36px", fontWeight: 500, color: "var(--gold)", textDecoration: "none", fontStyle: "italic" }}>
+              Join
+            </Link>
+          </nav>
+          <div style={{ width: "32px", height: "1px", backgroundColor: "var(--gold)", marginTop: "48px" }} />
+        </div>
+      )}
+
       <main style={{ minHeight: "100vh", backgroundColor: "var(--cream)", color: "var(--ink)" }}>
 
         {/* ── Nav ─────────────────────────────────────────── */}
@@ -277,11 +306,20 @@ export default function LoginPage() {
               </span>
             </Link>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
-              <Link href="/join" className="nav-link" style={{ textDecoration: "none" }}>
-                Join
-              </Link>
-            </div>
+            <nav style={{ gap: "32px", alignItems: "center" }} className="hidden md:flex">
+              <Link href="/#drops" className="nav-link" style={{ textDecoration: "none" }}>Drops</Link>
+              <Link href="/about" className="nav-link" style={{ textDecoration: "none" }}>About</Link>
+              <Link href="/faq" className="nav-link" style={{ textDecoration: "none" }}>FAQ</Link>
+              <Link href="/join" className="nav-link" style={{ textDecoration: "none", color: "var(--gold)" }}>Join</Link>
+            </nav>
+
+            <button onClick={() => setMenuOpen((o) => !o)} className="flex md:hidden"
+              style={{ background: "none", border: "none", cursor: "pointer", padding: "4px", flexDirection: "column", gap: "4.5px", zIndex: 60 }}
+              aria-label={menuOpen ? "Close menu" : "Open menu"}>
+              <span className={`bar ${menuOpen ? "bar-top-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-mid-open" : ""}`} />
+              <span className={`bar ${menuOpen ? "bar-bot-open" : ""}`} />
+            </button>
           </div>
         </header>
 
@@ -343,4 +381,9 @@ const SHARED_STYLES = [
   ".delay-3 { animation-delay: 0.4s; }",
   ".gold-rule { border: none; border-top: 1px solid var(--gold); opacity: 0.35; margin: 0; }",
   ".status-badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; font-family: 'Jost', sans-serif; }",
+  ".bar { display: block; width: 22px; height: 1.5px; background: var(--ink); transition: transform 0.25s ease, opacity 0.25s ease; }",
+  ".bar-top-open { transform: translateY(5px) rotate(45deg); }",
+  ".bar-mid-open { opacity: 0; }",
+  ".bar-bot-open { transform: translateY(-5px) rotate(-45deg); }",
+  "@keyframes menuFadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }",
 ].join("\n");
