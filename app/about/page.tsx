@@ -322,8 +322,8 @@ export default function AboutPage() {
             <span className="font-display" style={{ fontSize: "clamp(52px, 8vw, 80px)", fontWeight: 500, color: "var(--gold)", lineHeight: 1, letterSpacing: "-0.02em" }}>
               30–40%
             </span>
-            <span style={{ fontSize: "14px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.6, maxWidth: "220px" }}>
-              savings on the staples of a well-lived life
+            <span style={{ fontSize: "18px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.6, maxWidth: "220px" }}>
+              staple, iconic products from the most well-known brands 
             </span>
           </div>
         </section>
