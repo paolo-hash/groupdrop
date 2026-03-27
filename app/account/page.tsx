@@ -32,6 +32,13 @@ type Profile = {
   created_at: string;
 };
 
+type ReferralCredit = {
+  id: string;
+  amount_cents: number;
+  used: boolean;
+  created_at: string;
+};
+
 /* CHANGE: Added Order type for order history */
 type OrderItem = {
   sku_id: string;
@@ -88,6 +95,10 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true);
   /* CHANGE: Added orders state for order history */
   const [orders, setOrders] = useState<Order[]>([]);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [myCredits, setMyCredits] = useState(0);
+  const [referralCredits, setReferralCredits] = useState<ReferralCredit[]>([]);
+  const [referralCopied, setReferralCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showConcierge, setShowConcierge] = useState(false);
   const [conciergeForm, setConciergeForm] = useState({ name: "", email: "", topic: "General Question", message: "" });
@@ -136,6 +147,21 @@ export default function AccountPage() {
       } else {
         setOrders((orderData ?? []) as Order[]);
       }
+
+      /* Referral code + credit balance + history */
+      const [{ data: codeData }, { data: creditsData }] = await Promise.all([
+        supabase.rpc("get_or_create_referral_code"),
+        supabase.rpc("get_my_referral_credits"),
+      ]);
+      if (codeData) setReferralCode(codeData as string);
+      if (creditsData != null) setMyCredits(creditsData as number);
+
+      const { data: creditHistory } = await supabase
+        .from("referral_credits")
+        .select("id, amount_cents, used, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (creditHistory) setReferralCredits(creditHistory as ReferralCredit[]);
 
       setLoading(false);
     }
@@ -535,6 +561,133 @@ export default function AccountPage() {
               </button>
             </div>
 
+          </section>
+
+          {/* ── Referrals ─────────────────────────────────── */}
+          <section style={{ paddingTop: "20px", paddingBottom: "60px" }}>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px", flexWrap: "wrap", gap: "12px" }}>
+              <div>
+                <p style={{ fontSize: "10px", letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "8px" }}>
+                  Referrals
+                </p>
+                <h2 className="font-display" style={{ fontSize: "28px", fontWeight: 500, letterSpacing: "-0.01em" }}>
+                  Invite &amp; earn
+                </h2>
+              </div>
+              {myCredits > 0 && (
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "4px" }}>
+                    Available credit
+                  </p>
+                  <span className="font-display" style={{ fontSize: "28px", fontWeight: 500, color: "var(--gold)" }}>
+                    ${(myCredits / 100).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="grain" style={{ backgroundColor: "#FDFAF5", border: "1px solid var(--border)", borderRadius: "4px", padding: "32px", position: "relative", overflow: "hidden" }}>
+
+              {/* How it works */}
+              <div style={{ display: "flex", gap: "32px", flexWrap: "wrap", marginBottom: referralCredits.length > 0 ? "28px" : "0", alignItems: "flex-start" }}>
+                <div style={{ flex: 1, minWidth: "240px" }}>
+                  <p style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "10px" }}>
+                    How it works
+                  </p>
+                  <p style={{ fontSize: "14px", fontWeight: 300, lineHeight: 1.8, color: "var(--ink-muted)", marginBottom: "20px" }}>
+                    Share your invite link. Your friend gets{" "}
+                    <span style={{ fontWeight: 500, color: "var(--ink)" }}>$25 off their first order</span>
+                    {" "}— and you earn a{" "}
+                    <span style={{ fontWeight: 500, color: "var(--ink)" }}>$25 credit</span>
+                    {" "}when they join.
+                  </p>
+
+                  {referralCode ? (
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                      <div style={{
+                        flex: 1, minWidth: "180px",
+                        backgroundColor: "var(--parchment)", border: "1px solid var(--border)",
+                        borderRadius: "2px", padding: "10px 14px",
+                        fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)",
+                        letterSpacing: "0.04em", fontFamily: "monospace",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>
+                        groupdrop.com?ref={referralCode}
+                      </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}?ref=${referralCode}`);
+                          setReferralCopied(true);
+                          setTimeout(() => setReferralCopied(false), 2000);
+                        }}
+                        className="btn-primary"
+                        style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+                      >
+                        {referralCopied ? "Copied ✓" : "Copy link →"}
+                      </button>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "var(--ink-muted)", fontWeight: 300 }}>Loading your referral link…</p>
+                  )}
+                </div>
+
+                {/* Credit balance widget */}
+                <div style={{
+                  textAlign: "center", padding: "20px 28px",
+                  border: "1px solid var(--border)", borderRadius: "2px",
+                  flexShrink: 0,
+                }}>
+                  <p style={{ fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "10px" }}>
+                    Balance
+                  </p>
+                  <span className="font-display" style={{
+                    fontSize: "44px", fontWeight: 500, lineHeight: 1,
+                    color: myCredits > 0 ? "var(--gold)" : "var(--ink-muted)",
+                  }}>
+                    ${(myCredits / 100).toLocaleString()}
+                  </span>
+                  <p style={{ fontSize: "10px", color: "var(--ink-muted)", fontWeight: 300, marginTop: "8px", letterSpacing: "0.02em" }}>
+                    {myCredits > 0 ? "Applied at checkout" : "No credits yet"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Credit history */}
+              {referralCredits.length > 0 && (
+                <>
+                  <hr className="gold-rule" style={{ marginBottom: "20px" }} />
+                  <p style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "16px" }}>
+                    Credit history
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {referralCredits.map((credit) => (
+                      <div key={credit.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span style={{
+                            width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0, display: "inline-block",
+                            backgroundColor: credit.used ? "var(--parchment)" : "var(--gold)",
+                            border: credit.used ? "1px solid var(--ink-muted)" : "none",
+                          }} />
+                          <span style={{ fontSize: "12px", fontWeight: 300, color: "var(--ink-muted)" }}>
+                            {formatDate(credit.created_at)}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          <span style={{ fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", fontWeight: 500, color: credit.used ? "var(--ink-muted)" : "var(--gold)" }}>
+                            {credit.used ? "Used" : "Available"}
+                          </span>
+                          <span className="font-display" style={{ fontSize: "20px", fontWeight: 500, color: credit.used ? "var(--ink-muted)" : "var(--gold)" }}>
+                            ${(credit.amount_cents / 100).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+            </div>
           </section>
 
           {/* ── Order History ─────────────────────────────── */}

@@ -148,6 +148,9 @@ export default function DropPage({
   const [pendingRef, setPendingRef] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  /* Mobile cart drawer */
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+
   /* Animated raised amount — smoothly counts up when raisedCents changes */
   const [animatedRaisedCents, setAnimatedRaisedCents] = useState(0);
   const animRafRef = useRef<number>(0);
@@ -368,6 +371,7 @@ export default function DropPage({
   function clearCart() {
     setQtyById({});
     setStatusMsg("");
+    setCartDrawerOpen(false);
   }
 
   async function handleJoin() {
@@ -1399,6 +1403,87 @@ export default function DropPage({
           </footer>
 
         </div>
+      {/* ── Mobile cart drawer ────────────────────────────── */}
+      {cartDrawerOpen && !reachedTarget && !isClosed && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setCartDrawerOpen(false)}
+            style={{
+              position: "fixed", inset: 0, zIndex: 38,
+              backgroundColor: "rgba(26,24,20,0.35)",
+              backdropFilter: "blur(2px)",
+            }}
+          />
+          {/* Drawer panel */}
+          <div
+            className="mobile-cart-drawer"
+            style={{
+              position: "fixed", bottom: "73px", left: 0, right: 0, zIndex: 39,
+              backgroundColor: "#FDFAF5",
+              borderTop: "1px solid var(--gold)",
+              maxHeight: "60vh", overflowY: "auto",
+              padding: "24px 24px 4px",
+            }}
+          >
+            {/* Handle */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <span style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                Your cart
+              </span>
+              <button
+                onClick={() => setCartDrawerOpen(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, fontFamily: "inherit", padding: 0 }}
+              >
+                Close ✕
+              </button>
+            </div>
+
+            {/* Line items */}
+            {cartItems.length === 0 ? (
+              <p style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.7, paddingBottom: "20px" }}>
+                No items selected yet.
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "20px" }}>
+                {cartItems.map(({ sku, qty, lineTotal }) => (
+                  <div key={sku.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+                    <div>
+                      <p className="font-display" style={{ fontSize: "16px", fontWeight: 500, marginBottom: "2px" }}>{sku.name}</p>
+                      <p style={{ fontSize: "11px", color: "var(--ink-muted)", fontWeight: 300 }}>
+                        {qty} × {moneyFromCents(sku.price_cents)}
+                      </p>
+                    </div>
+                    <span className="font-display" style={{ fontSize: "17px", fontWeight: 500, flexShrink: 0 }}>
+                      {moneyFromCents(lineTotal)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Totals */}
+            <hr className="gold-rule" style={{ marginBottom: "16px" }} />
+            {creditApplied > 0 && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>Subtotal</span>
+                  <span style={{ fontSize: "14px", fontWeight: 400 }}>{moneyFromCents(cartTotal)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>Referral credit</span>
+                  <span style={{ fontSize: "14px", fontWeight: 400, color: "var(--gold)" }}>-{moneyFromCents(creditApplied)}</span>
+                </div>
+              </>
+            )}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "24px" }}>
+              <span style={{ fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>Total</span>
+              <span className="font-display" style={{ fontSize: "26px", fontWeight: 500 }}>{moneyFromCents(effectiveTotal)}</span>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Mobile sticky cart bar ─────────────────────────── */}
       <div className="flex md:hidden" style={{
         position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40,
@@ -1471,14 +1556,46 @@ export default function DropPage({
         ) : (
           /* ── Normal cart state ── */
           <>
-            <div>
-              <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, marginBottom: "3px" }}>
-                {cartItems.length === 0 ? "Your cart" : `${cartItems.reduce((s, x) => s + x.qty, 0)} item${cartItems.reduce((s, x) => s + x.qty, 0) === 1 ? "" : "s"}`}
-              </p>
-              <span className="font-display" style={{ fontSize: "24px", fontWeight: 500, lineHeight: 1 }}>
-                {moneyFromCents(cartTotal)}
-              </span>
-            </div>
+            {/* Left side — tappable when items in cart */}
+            <button
+              onClick={() => { if (cartItems.length > 0) setCartDrawerOpen((o) => !o); }}
+              style={{
+                background: "none", border: "none", padding: 0, textAlign: "left",
+                cursor: cartItems.length > 0 ? "pointer" : "default",
+                fontFamily: "inherit",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+                <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500, margin: 0 }}>
+                  {cartItems.length === 0 ? "Your cart" : `${cartItems.reduce((s, x) => s + x.qty, 0)} item${cartItems.reduce((s, x) => s + x.qty, 0) === 1 ? "" : "s"}`}
+                </p>
+                {cartItems.length > 0 && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: "16px", height: "16px", borderRadius: "50%",
+                    backgroundColor: "var(--gold)", color: "var(--ink)",
+                    fontSize: "9px", fontWeight: 700, lineHeight: 1, flexShrink: 0,
+                  }}>
+                    {cartItems.reduce((s, x) => s + x.qty, 0)}
+                  </span>
+                )}
+                {cartItems.length > 0 && (
+                  <span style={{ fontSize: "9px", color: "var(--ink-muted)", opacity: 0.7 }}>
+                    {cartDrawerOpen ? "▼" : "▲"}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+                <span className="font-display" style={{ fontSize: "24px", fontWeight: 500, lineHeight: 1 }}>
+                  {moneyFromCents(effectiveTotal)}
+                </span>
+                {creditApplied > 0 && (
+                  <span style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500 }}>
+                    credit applied
+                  </span>
+                )}
+              </div>
+            </button>
             {authChecked && !profile ? (
               <Link
                 href={`/login?redirect=/drops/${slug}`}
@@ -1490,10 +1607,22 @@ export default function DropPage({
             ) : (
               <button
                 onClick={handleJoin}
-                className="btn-primary"
-                style={{ borderRadius: "2px", border: "none", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}
+                disabled={cartTotal <= 0}
+                style={{
+                  borderRadius: "2px", border: "none", fontFamily: "inherit", flexShrink: 0,
+                  cursor: cartTotal <= 0 ? "not-allowed" : "pointer",
+                  ...(cartTotal <= 0 ? {
+                    backgroundColor: "var(--parchment)", color: "var(--ink-muted)",
+                    fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                    fontWeight: 500, padding: "12px 20px",
+                  } : {
+                    background: "var(--gold)", color: "var(--ink)",
+                    fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                    fontWeight: 500, padding: "12px 20px",
+                  }),
+                }}
               >
-                {cartTotal <= 0 ? "Add items →" : `Authorize ${moneyFromCents(effectiveTotal)} →`}
+                {cartTotal <= 0 ? "Add items" : `Authorize ${moneyFromCents(effectiveTotal)} →`}
               </button>
             )}
           </>
@@ -1559,5 +1688,12 @@ const SHARED_STYLES = [
   ".status-badge { font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500; font-family: 'Jost', sans-serif; }",
   "@keyframes urgencyPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }",
   ".urgency-pulse { animation: urgencyPulse 1.8s ease-in-out infinite; }",
+  ".bar { display: block; width: 22px; height: 1.5px; background: var(--ink); transition: transform 0.25s ease, opacity 0.25s ease; }",
+  ".bar-top-open { transform: translateY(5px) rotate(45deg); }",
+  ".bar-mid-open { opacity: 0; }",
+  ".bar-bot-open { transform: translateY(-5px) rotate(-45deg); }",
+  "@keyframes menuFadeIn { from { opacity: 0 } to { opacity: 1 } }",
   "@media (max-width: 767px) { .page-bottom-pad { padding-bottom: 96px; } }",
+  "@keyframes drawerSlideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }",
+  ".mobile-cart-drawer { animation: drawerSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards; }",
 ].join("\n");

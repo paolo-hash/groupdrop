@@ -83,6 +83,28 @@ type WaitlistEntry = {
   created_at: string;
 };
 
+type ReferralCode = {
+  user_id: string;
+  code: string;
+};
+
+type Referral = {
+  id: string;
+  referrer_id: string;
+  referred_id: string | null;
+  drop_id: string;
+  created_at: string;
+};
+
+type ReferralCredit = {
+  id: string;
+  user_id: string;
+  amount_cents: number;
+  used: boolean;
+  order_id: string | null;
+  created_at: string;
+};
+
 const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
 
 const STATUS_FLOW = ["pending", "confirmed", "shipped", "delivered"] as const;
@@ -130,7 +152,10 @@ export default function AdminPage() {
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [selectedSlug, setSelectedSlug] = useState("all");
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"orders" | "waitlist" | "drops">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "waitlist" | "drops" | "referrals">("orders");
+  const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [referralCredits, setReferralCredits] = useState<ReferralCredit[]>([]);
   const [showNewDrop, setShowNewDrop] = useState(false);
   const [newDropForm, setNewDropForm] = useState<NewDropForm>({
     title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "",
@@ -160,15 +185,28 @@ export default function AdminPage() {
 
       setAuthorized(true);
 
-      const [{ data: ordersData }, { data: dropsData }, { data: waitlistData }] = await Promise.all([
+      const [
+        { data: ordersData },
+        { data: dropsData },
+        { data: waitlistData },
+        { data: codesData },
+        { data: referralsData },
+        { data: creditsData },
+      ] = await Promise.all([
         supabase.from("orders").select("*").order("created_at", { ascending: false }),
         supabase.from("drops").select("*").order("created_at", { ascending: false }),
         supabase.from("waitlist").select("*").order("created_at", { ascending: false }),
+        supabase.from("referral_codes").select("user_id, code"),
+        supabase.from("referrals").select("*").order("created_at", { ascending: false }),
+        supabase.from("referral_credits").select("*").order("created_at", { ascending: false }),
       ]);
 
       setOrders((ordersData ?? []) as Order[]);
       setDrops((dropsData ?? []) as Drop[]);
       setWaitlist((waitlistData ?? []) as WaitlistEntry[]);
+      setReferralCodes((codesData ?? []) as ReferralCode[]);
+      setReferrals((referralsData ?? []) as Referral[]);
+      setReferralCredits((creditsData ?? []) as ReferralCredit[]);
       setLoading(false);
     }
 
@@ -407,7 +445,7 @@ export default function AdminPage() {
           {/* ── View tabs ─────────────────────────────────────── */}
           <section style={{ paddingTop: "40px", paddingBottom: "0" }}>
             <div style={{ display: "flex", gap: "8px", marginBottom: "32px", borderBottom: "1px solid var(--border)", paddingBottom: "0" }}>
-              {(["orders", "waitlist", "drops"] as const).map((tab) => (
+              {(["orders", "waitlist", "drops", "referrals"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -421,7 +459,10 @@ export default function AdminPage() {
                     transition: "all 0.15s ease",
                   }}
                 >
-                  {tab === "orders" ? `Orders (${orders.length})` : tab === "waitlist" ? `Waitlist (${waitlist.length})` : `Drops (${drops.length})`}
+                  {tab === "orders" ? `Orders (${orders.length})`
+                    : tab === "waitlist" ? `Waitlist (${waitlist.length})`
+                    : tab === "drops" ? `Drops (${drops.length})`
+                    : `Referrals (${referrals.length})`}
                 </button>
               ))}
             </div>
@@ -1029,6 +1070,178 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+
+          {/* ── Referrals tab ─────────────────────────────────── */}
+          {activeTab === "referrals" && (() => {
+            // Build a lookup: user_id → referral code
+            const codeByUser = Object.fromEntries(referralCodes.map((r) => [r.user_id, r.code]));
+
+            // Build a lookup: order_id → order (for referred user email)
+            const orderById = Object.fromEntries(orders.map((o) => [o.id, o]));
+
+            const totalCreditsIssued = referralCredits.reduce((s, c) => s + c.amount_cents, 0);
+            const totalCreditsUsed = referralCredits.filter((c) => c.used).reduce((s, c) => s + c.amount_cents, 0);
+            const totalCreditsOutstanding = totalCreditsIssued - totalCreditsUsed;
+
+            // Top referrers: group credits by user_id
+            const creditsByUser: Record<string, { count: number; total: number; code: string }> = {};
+            referralCredits.forEach((c) => {
+              if (!creditsByUser[c.user_id]) {
+                creditsByUser[c.user_id] = { count: 0, total: 0, code: codeByUser[c.user_id] ?? "—" };
+              }
+              creditsByUser[c.user_id].count += 1;
+              creditsByUser[c.user_id].total += c.amount_cents;
+            });
+            const topReferrers = Object.entries(creditsByUser)
+              .sort((a, b) => b[1].count - a[1].count)
+              .slice(0, 10);
+
+            return (
+              <div style={{ paddingBottom: "80px" }}>
+
+                {/* Summary stats */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "16px", marginBottom: "40px" }}>
+                  {[
+                    { label: "Total referrals", value: String(referrals.length) },
+                    { label: "Credits issued", value: money(totalCreditsIssued) },
+                    { label: "Credits used", value: money(totalCreditsUsed) },
+                    { label: "Outstanding liability", value: money(totalCreditsOutstanding), highlight: totalCreditsOutstanding > 0 },
+                    { label: "Unique referrers", value: String(Object.keys(creditsByUser).length) },
+                  ].map(({ label, value, highlight }) => (
+                    <div key={label} className="grain" style={{
+                      backgroundColor: "#FDFAF5", border: `1px solid ${highlight ? "var(--gold)" : "var(--border)"}`,
+                      borderRadius: "4px", padding: "20px 24px", position: "relative", overflow: "hidden",
+                    }}>
+                      <p style={{ fontSize: "10px", letterSpacing: "0.16em", textTransform: "uppercase", color: highlight ? "var(--gold)" : "var(--ink-muted)", fontWeight: 500, marginBottom: "8px" }}>
+                        {label}
+                      </p>
+                      <p className="font-display" style={{ fontSize: "28px", fontWeight: 500, lineHeight: 1, color: highlight ? "var(--gold)" : "var(--ink)" }}>
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "start" }}>
+
+                  {/* Credit history table */}
+                  <div>
+                    <p style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "16px" }}>
+                      Credit log ({referralCredits.length})
+                    </p>
+                    {referralCredits.length === 0 ? (
+                      <p style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)" }}>No credits issued yet.</p>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                        {/* Header */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px 70px", gap: "12px", padding: "8px 16px" }}>
+                          {["Ref code", "Amount", "Status", "Date"].map((h) => (
+                            <span key={h} style={{ fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>{h}</span>
+                          ))}
+                        </div>
+                        {referralCredits.map((credit) => {
+                          const code = codeByUser[credit.user_id] ?? credit.user_id.slice(0, 8);
+                          const triggerOrder = credit.order_id ? orderById[credit.order_id] : null;
+                          return (
+                            <div key={credit.id} style={{
+                              display: "grid", gridTemplateColumns: "1fr 80px 80px 70px", gap: "12px",
+                              padding: "10px 16px", backgroundColor: "#FDFAF5",
+                              border: "1px solid var(--border)", borderRadius: "2px",
+                            }}>
+                              <div>
+                                <span style={{ fontSize: "11px", fontWeight: 400, fontFamily: "monospace", color: "var(--ink)" }}>{code}</span>
+                                {triggerOrder && (
+                                  <p style={{ fontSize: "10px", fontWeight: 300, color: "var(--ink-muted)", marginTop: "2px" }}>
+                                    {triggerOrder.user_email}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="font-display" style={{ fontSize: "16px", fontWeight: 500 }}>{money(credit.amount_cents)}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: credit.used ? "var(--ink-muted)" : "var(--gold)", display: "inline-block", flexShrink: 0 }} />
+                                <span style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, color: credit.used ? "var(--ink-muted)" : "var(--gold)" }}>
+                                  {credit.used ? "Used" : "Live"}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)" }}>{formatDate(credit.created_at)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Top referrers */}
+                  <div>
+                    <p style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: "16px" }}>
+                      Top referrers
+                    </p>
+                    {topReferrers.length === 0 ? (
+                      <p style={{ fontSize: "13px", fontWeight: 300, color: "var(--ink-muted)" }}>No referrals yet.</p>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 80px", gap: "12px", padding: "8px 16px" }}>
+                          {["Code", "Referrals", "Credits"].map((h) => (
+                            <span key={h} style={{ fontSize: "9px", letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-muted)", fontWeight: 500 }}>{h}</span>
+                          ))}
+                        </div>
+                        {topReferrers.map(([userId, data], i) => (
+                          <div key={userId} style={{
+                            display: "grid", gridTemplateColumns: "1fr 60px 80px", gap: "12px",
+                            padding: "12px 16px", backgroundColor: "#FDFAF5",
+                            border: `1px solid ${i === 0 ? "var(--gold)" : "var(--border)"}`,
+                            borderRadius: "2px",
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              {i === 0 && <span style={{ fontSize: "9px", color: "var(--gold)" }}>★</span>}
+                              <span style={{ fontSize: "11px", fontWeight: 400, fontFamily: "monospace", color: "var(--ink)" }}>{data.code}</span>
+                            </div>
+                            <span className="font-display" style={{ fontSize: "18px", fontWeight: 500 }}>{data.count}</span>
+                            <span className="font-display" style={{ fontSize: "18px", fontWeight: 500 }}>{money(data.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Referral events */}
+                    {referrals.length > 0 && (
+                      <>
+                        <p style={{ fontSize: "10px", letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginTop: "32px", marginBottom: "16px" }}>
+                          Referral events ({referrals.length})
+                        </p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+                          {referrals.map((ref) => {
+                            const code = codeByUser[ref.referrer_id] ?? ref.referrer_id.slice(0, 8);
+                            const drop = drops.find((d) => d.id === ref.drop_id);
+                            // Find the referred user's email from orders
+                            const referredOrder = orders.find((o) => o.drop_id === ref.drop_id && ref.referred_id);
+                            return (
+                              <div key={ref.id} style={{
+                                padding: "10px 16px", backgroundColor: "#FDFAF5",
+                                border: "1px solid var(--border)", borderRadius: "2px",
+                              }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
+                                  <div>
+                                    <span style={{ fontSize: "11px", fontWeight: 400, fontFamily: "monospace", color: "var(--ink)" }}>{code}</span>
+                                    {referredOrder && <span style={{ fontSize: "10px", fontWeight: 300, color: "var(--ink-muted)", marginLeft: "10px" }}>→ {referredOrder.user_email}</span>}
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                                    {drop && <span style={{ fontSize: "10px", color: "var(--ink-muted)", fontWeight: 300 }}>{dropDisplayName(drop)}</span>}
+                                    <span style={{ fontSize: "10px", fontWeight: 300, color: "var(--ink-muted)" }}>{formatDate(ref.created_at)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            );
+          })()}
 
           </section>
 

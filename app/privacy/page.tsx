@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
+import { TERMLY_PRIVACY_HTML } from "./termly-content";
 
 export default function PrivacyPage() {
   const [user, setUser] = useState<{ id: string } | null>(null);
@@ -99,17 +100,12 @@ export default function PrivacyPage() {
 
         <hr className="gold-rule" />
 
-        {SECTIONS.map(({ heading, placeholder }) => (
-          <section key={heading} style={{ paddingTop: "56px", paddingBottom: "56px" }}>
-            <h2 className="font-display" style={{ fontSize: "28px", fontWeight: 500, fontStyle: "italic", letterSpacing: "-0.01em", marginBottom: "20px" }}>
-              {heading}
-            </h2>
-            <p style={{ fontSize: "15px", fontWeight: 300, lineHeight: 1.85, color: "var(--ink-muted)" }}>
-              {placeholder}
-            </p>
-            <hr className="gold-rule" style={{ marginTop: "56px" }} />
-          </section>
-        ))}
+        <section style={{ paddingTop: "40px", paddingBottom: "80px" }}>
+          <div
+            dangerouslySetInnerHTML={{ __html: TERMLY_PRIVACY_HTML }}
+            style={{ fontSize: "14px", lineHeight: 1.8, color: "var(--ink-muted)", maxWidth: "780px" }}
+          />
+        </section>
       </main>
 
       <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 28px" }}>
@@ -135,17 +131,6 @@ export default function PrivacyPage() {
   );
 }
 
-const SECTIONS = [
-  { heading: "Information We Collect", placeholder: "Content coming soon." },
-  { heading: "How We Use Your Information", placeholder: "Content coming soon." },
-  { heading: "Information Sharing", placeholder: "Content coming soon." },
-  { heading: "Data Retention", placeholder: "Content coming soon." },
-  { heading: "Your Rights", placeholder: "Content coming soon." },
-  { heading: "Cookies & Tracking", placeholder: "Content coming soon." },
-  { heading: "Security", placeholder: "Content coming soon." },
-  { heading: "Changes to This Policy", placeholder: "Content coming soon." },
-  { heading: "Contact", placeholder: "Content coming soon." },
-];
 
 const legalLinkStyle: React.CSSProperties = {
   fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase",

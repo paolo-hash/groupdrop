@@ -205,6 +205,12 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
+  /* Capture ?ref= referral code from invite links that land on home page */
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) localStorage.setItem("gd_ref", ref);
+  }, []);
+
   /* Detect ?welcome=true after Stripe checkout and show the welcome modal */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
