@@ -15,6 +15,7 @@ type Drop = {
   raised: number | null;
   closes_at: string;
   hero_image_url: string | null;
+  category: string | null;
 };
 
 /* ===============================
@@ -71,6 +72,9 @@ export default function Home() {
   const [showEmailCapture, setShowEmailCapture] = useState(false);
   const [emailCaptureValue, setEmailCaptureValue] = useState("");
   const [emailCaptureSent, setEmailCaptureSent] = useState(false);
+
+  /* Category filter */
+  const [activeFilter, setActiveFilter] = useState<string>("all");
 
   /* Member counts — number of orders per drop */
   const [memberCountMap, setMemberCountMap] = useState<Record<string, number>>({});
@@ -951,11 +955,34 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Category filter pills — only shown when 2+ categories exist */}
+            {!loading && (() => {
+              const categories = Array.from(new Set(drops.map((d) => d.category).filter(Boolean))) as string[];
+              if (categories.length < 2) return null;
+              return (
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '32px' }}>
+                  {["all", ...categories].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveFilter(cat)}
+                      style={{
+                        fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase',
+                        fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
+                        padding: '8px 18px', borderRadius: '2px', border: '1px solid',
+                        transition: 'all 0.15s ease',
+                        backgroundColor: activeFilter === cat ? 'var(--gold)' : 'transparent',
+                        color: activeFilter === cat ? 'var(--ink)' : 'var(--ink-muted)',
+                        borderColor: activeFilter === cat ? 'var(--gold)' : 'var(--border)',
+                      }}
+                    >
+                      {cat === "all" ? `All (${drops.length})` : `${cat} (${drops.filter((d) => d.category === cat).length})`}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+
             {loading && (
-              /*
-                CHANGE: Loading state is now a refined single line in small
-                tracked caps rather than a plain "Loading drops..." text.
-              */
               <p style={{ fontSize: '11px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500 }}>
                 Loading drops…
               </p>
@@ -1018,7 +1045,7 @@ export default function Home() {
             )}
 
             <div data-reveal style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-              {!loading && drops.map((drop) => {
+              {!loading && drops.filter((d) => activeFilter === "all" || d.category === activeFilter).map((drop) => {
 
                 const raised = drop.raised ?? 0;
                 const displayRaised = displayRaisedMap[drop.id] ?? raised;
@@ -1095,6 +1122,17 @@ export default function Home() {
                         }}>
                           <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--gold)', display: 'inline-block' }} />
                           Early Access
+                        </span>
+                      )}
+
+                      {drop.category && (
+                        <span style={{
+                          fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase',
+                          fontWeight: 500, color: 'var(--ink-muted)',
+                          backgroundColor: 'var(--parchment)',
+                          padding: '3px 8px', borderRadius: '2px',
+                        }}>
+                          {drop.category}
                         </span>
                       )}
                     </div>

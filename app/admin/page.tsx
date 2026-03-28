@@ -45,6 +45,7 @@ type Drop = {
   closes_at?: string | null;
   hero_image_url?: string | null;
   description?: string | null;
+  category?: string | null;
 };
 
 type NewDropForm = {
@@ -54,6 +55,7 @@ type NewDropForm = {
   target: string;
   closes_at: string;
   hero_image_url: string;
+  category: string;
 };
 
 type Sku = {
@@ -158,7 +160,7 @@ export default function AdminPage() {
   const [referralCredits, setReferralCredits] = useState<ReferralCredit[]>([]);
   const [showNewDrop, setShowNewDrop] = useState(false);
   const [newDropForm, setNewDropForm] = useState<NewDropForm>({
-    title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "",
+    title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "", category: "",
   });
   const [newDropSaving, setNewDropSaving] = useState(false);
   const [expandedDrop, setExpandedDrop] = useState<string | null>(null);
@@ -245,11 +247,12 @@ export default function AdminPage() {
       raised: 0,
       closes_at: newDropForm.closes_at || null,
       hero_image_url: newDropForm.hero_image_url || null,
+      category: newDropForm.category || null,
     }).select().single();
     if (!error && data) {
       setDrops((prev) => [data as Drop, ...prev]);
       setShowNewDrop(false);
-      setNewDropForm({ title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "" });
+      setNewDropForm({ title: "", slug: "", description: "", target: "", closes_at: "", hero_image_url: "", category: "" });
     } else if (error) {
       alert("Error creating drop: " + error.message);
     }
@@ -875,6 +878,15 @@ export default function AdminPage() {
                         onChange={(e) => setNewDropForm((f) => ({ ...f, hero_image_url: e.target.value }))}
                       />
                     </div>
+                    <div>
+                      <label style={labelStyle}>Category (optional)</label>
+                      <input
+                        style={inputStyle}
+                        placeholder="e.g. Fragrance, Skincare, Apparel…"
+                        value={newDropForm.category}
+                        onChange={(e) => setNewDropForm((f) => ({ ...f, category: e.target.value }))}
+                      />
+                    </div>
                     <div style={{ gridColumn: "1 / -1" }}>
                       <label style={labelStyle}>Description (optional)</label>
                       <textarea
@@ -926,9 +938,16 @@ export default function AdminPage() {
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#FDFAF5")}
                       >
                         <div>
-                          <p style={{ fontSize: "13px", fontWeight: 500, marginBottom: "2px" }}>
-                            {isExpanded ? "▾" : "▸"} {dropDisplayName(drop)}
-                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "2px" }}>
+                            <p style={{ fontSize: "13px", fontWeight: 500 }}>
+                              {isExpanded ? "▾" : "▸"} {dropDisplayName(drop)}
+                            </p>
+                            {drop.category && (
+                              <span style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, color: "var(--ink-muted)", backgroundColor: "var(--parchment)", padding: "2px 7px", borderRadius: "2px" }}>
+                                {drop.category}
+                              </span>
+                            )}
+                          </div>
                           <p style={{ fontSize: "11px", fontWeight: 300, color: "var(--ink-muted)" }}>{drop.slug}</p>
                         </div>
                         <p className="font-display" style={{ fontSize: "18px", fontWeight: 500, color: pct >= 100 ? "var(--gold)" : "var(--ink)" }}>
