@@ -907,7 +907,7 @@ export default function DropPage({
                   {moneyFromCents(drop.targetCents)}
                 </span>
               </div>
-              <div style={{ height: "3px", backgroundColor: "var(--parchment)", borderRadius: "2px", overflow: "hidden", marginBottom: "12px" }}>
+              <div style={{ height: "6px", backgroundColor: "var(--parchment)", borderRadius: "3px", overflow: "hidden", marginBottom: "12px" }}>
                 <div className="progress-fill" style={{ height: "100%", width: mounted ? `${percent}%` : "0%" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>

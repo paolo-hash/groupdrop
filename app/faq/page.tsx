@@ -52,7 +52,7 @@ const FAQ_SECTIONS = [
     category: "Shipping & Logistics",
     items: [
       {
-        q: "Why does shipping take longer than traditional retail?",
+        q: "When will I receive my items?",
         a: "To achieve these prices, we move in high-volume cycles. Once a Drop hits 100%, the shipment travels from the distributor to our central hub for sorting before being dispatched to your individual address. This \"Slow Luxury\" model is the secret to our savings.",
       },
       {

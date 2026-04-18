@@ -960,12 +960,11 @@ export default function AdminPage() {
                           <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg, var(--gold), var(--gold-light))", borderRadius: "2px" }} />
                         </div>
                         <div style={{ display: "flex", gap: "6px", flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                          {!isClosed && (
-                            <button onClick={() => closeDropNow(drop.id)}
-                              style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid #B85450", backgroundColor: "transparent", color: "#B85450" }}>
-                              Close now
-                            </button>
-                          )}
+                          <button
+                            onClick={isClosed ? undefined : () => closeDropNow(drop.id)}
+                            style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: isClosed ? "default" : "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid #B85450", backgroundColor: "transparent", color: "#B85450", visibility: isClosed ? "hidden" : "visible" }}>
+                            Close now
+                          </button>
                           {[7, 14, 30].map((days) => (
                             <button key={days} onClick={() => extendDrop(drop.id, days)}
                               style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500, fontFamily: "inherit", cursor: "pointer", padding: "5px 10px", borderRadius: "2px", border: "1px solid var(--border)", backgroundColor: "transparent", color: "var(--ink-muted)" }}>

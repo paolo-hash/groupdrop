@@ -924,6 +924,29 @@ export default function Home() {
               insider pricing on brands that never go on sale.
             </p>
 
+            {!user && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '40px', flexWrap: 'wrap' }}>
+                <Link
+                  href="/join"
+                  className="btn-primary"
+                  style={{ borderRadius: '2px', textDecoration: 'none', fontSize: '12px', padding: '14px 32px' }}
+                >
+                  Join groupdrop →
+                </Link>
+                <Link
+                  href="/login"
+                  style={{
+                    fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase',
+                    fontWeight: 500, color: 'var(--ink-muted)', textDecoration: 'none',
+                    transition: 'color 0.2s',
+                  }}
+                  className="nav-link"
+                >
+                  Sign in
+                </Link>
+              </div>
+            )}
+
           </section>
 
           {/*
@@ -955,13 +978,31 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Category filter pills — only shown when 2+ categories exist */}
+            {/* Category filter pills */}
             {!loading && (() => {
-              const categories = Array.from(new Set(drops.map((d) => d.category).filter(Boolean))) as string[];
-              if (categories.length < 2) return null;
+              const now = Date.now();
+              const activeDrops = drops.filter((d) => !d.closes_at || new Date(d.closes_at).getTime() > now);
+              const closedDrops = drops.filter((d) => d.closes_at && new Date(d.closes_at).getTime() <= now);
+              const categories = Array.from(new Set(activeDrops.map((d) => d.category).filter(Boolean))) as string[];
+
               return (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '32px' }}>
-                  {["all", ...categories].map((cat) => (
+                  <button
+                    onClick={() => setActiveFilter("all")}
+                    style={{
+                      fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase',
+                      fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
+                      padding: '8px 18px', borderRadius: '2px', border: '1px solid',
+                      transition: 'all 0.15s ease',
+                      backgroundColor: activeFilter === "all" ? 'var(--gold)' : 'transparent',
+                      color: activeFilter === "all" ? 'var(--ink)' : 'var(--ink-muted)',
+                      borderColor: activeFilter === "all" ? 'var(--gold)' : 'var(--border)',
+                    }}
+                  >
+                    Active ({activeDrops.length})
+                  </button>
+
+                  {categories.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => setActiveFilter(cat)}
@@ -975,9 +1016,26 @@ export default function Home() {
                         borderColor: activeFilter === cat ? 'var(--gold)' : 'var(--border)',
                       }}
                     >
-                      {cat === "all" ? `All (${drops.length})` : `${cat} (${drops.filter((d) => d.category === cat).length})`}
+                      {cat} ({activeDrops.filter((d) => d.category === cat).length})
                     </button>
                   ))}
+
+                  {closedDrops.length > 0 && (
+                    <button
+                      onClick={() => setActiveFilter("closed")}
+                      style={{
+                        fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase',
+                        fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
+                        padding: '8px 18px', borderRadius: '2px', border: '1px solid',
+                        transition: 'all 0.15s ease',
+                        backgroundColor: activeFilter === "closed" ? 'var(--ink-muted)' : 'transparent',
+                        color: activeFilter === "closed" ? 'var(--cream)' : 'var(--ink-muted)',
+                        borderColor: activeFilter === "closed" ? 'var(--ink-muted)' : 'var(--border)',
+                      }}
+                    >
+                      Past ({closedDrops.length})
+                    </button>
+                  )}
                 </div>
               );
             })()}
@@ -1045,7 +1103,14 @@ export default function Home() {
             )}
 
             <div data-reveal style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-              {!loading && drops.filter((d) => activeFilter === "all" || d.category === activeFilter).map((drop) => {
+              {!loading && drops.filter((d) => {
+                const now = Date.now();
+                const isClosed = !!d.closes_at && new Date(d.closes_at).getTime() <= now;
+                if (activeFilter === "closed") return isClosed;
+                if (isClosed) return false;
+                if (activeFilter === "all") return true;
+                return d.category === activeFilter;
+              }).map((drop) => {
 
                 const raised = drop.raised ?? 0;
                 const displayRaised = displayRaisedMap[drop.id] ?? raised;
@@ -1181,9 +1246,9 @@ export default function Home() {
                       - Longer, smoother animation (1.2s vs 1s) with a premium easing curve
                     */}
                     <div style={{
-                      height: '3px',
+                      height: '6px',
                       backgroundColor: 'var(--parchment)',
-                      borderRadius: '2px',
+                      borderRadius: '3px',
                       overflow: 'hidden',
                       marginBottom: '10px',
                     }}>
@@ -1250,11 +1315,11 @@ export default function Home() {
                     {/* Drop closed label if closes_at has passed */}
                     {!isComplete && !countdown && (
                       <div style={{ marginBottom: '20px' }}>
-                        <p style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#B85450', fontWeight: 500, marginBottom: '10px' }}>
-                          Drop closed
+                        <p style={{ fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--ink-muted)', fontWeight: 500, marginBottom: '10px' }}>
+                          Closed
                         </p>
-                        <p className="font-display" style={{ fontSize: '28px', fontWeight: 500, color: '#B85450', lineHeight: 1, paddingBottom: '13px' }}>
-                          Did not fund
+                        <p className="font-display" style={{ fontSize: '28px', fontWeight: 500, color: 'var(--ink-muted)', lineHeight: 1, paddingBottom: '13px' }}>
+                          No longer active.
                         </p>
                       </div>
                     )}

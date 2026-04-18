@@ -323,7 +323,7 @@ export default function AboutPage() {
               30–40%
             </span>
             <span style={{ fontSize: "18px", fontWeight: 300, color: "var(--ink-muted)", lineHeight: 1.6, maxWidth: "220px" }}>
-              staple, iconic products from the most well-known brands 
+              savings on staple, iconic products from the most well-known brands 
             </span>
           </div>
         </section>
