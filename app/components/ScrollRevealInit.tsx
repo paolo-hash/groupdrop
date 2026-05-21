@@ -9,24 +9,22 @@ export default function ScrollRevealInit() {
   useEffect(() => {
     const below = (el: Element) => el.getBoundingClientRect().top >= window.innerHeight * 0.92;
 
-    // <section> elements — skip those whose children animate individually via [data-reveal]
     Array.from(document.querySelectorAll("section")).forEach((el) => {
       if (el.classList.contains("animate-fade-up")) return;
       if (el.querySelector("[data-reveal]")) return;
-      if (below(el)) el.classList.add("scroll-reveal");
+      if (below(el)) el.setAttribute("data-sr", "pending");
     });
 
-    // [data-reveal] elements — each animates individually (enables stagger between siblings)
     Array.from(document.querySelectorAll("[data-reveal]")).forEach((el) => {
       if (el.classList.contains("animate-fade-up")) return;
-      if (below(el)) el.classList.add("scroll-reveal");
+      if (below(el)) el.setAttribute("data-sr", "pending");
     });
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add("revealed");
+            entry.target.setAttribute("data-sr", "revealed");
             observer.unobserve(entry.target);
           }
         });
@@ -34,9 +32,14 @@ export default function ScrollRevealInit() {
       { threshold: 0.08, rootMargin: "0px 0px -32px 0px" }
     );
 
-    document.querySelectorAll(".scroll-reveal").forEach((el) => observer.observe(el));
+    document.querySelectorAll("[data-sr='pending']").forEach((el) => observer.observe(el));
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      document.querySelectorAll("[data-sr='pending']").forEach((el) => {
+        el.removeAttribute("data-sr");
+      });
+    };
   }, [pathname]);
 
   return null;
